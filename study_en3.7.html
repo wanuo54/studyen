@@ -1,0 +1,3151 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>选句讲解 · AI 解析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F3EA; --paper-dim:#EFE9DB; --ink:#24231F; --ink-soft:#6E685A;
+    --rule:#DED6C2; --toolbar:#1A1917; --toolbar-text:#F7F3EA;
+    --highlight-soft:rgba(255,222,122,0.42); --accent:#2C4A73;
+    --fav:#C24A50;
+    --g-main:#2F5D42; --g-main-bg:#E3EEE5;
+    --g-clause:#2C4A73; --g-clause-bg:#E5EBF3;
+    --g-phrase:#7A5023; --g-phrase-bg:#F3E6D3;
+    --g-insert:#6E3F76; --g-insert-bg:#EFE3F0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  *::before,*::after{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;background:#DCD5C4;
+    font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);
+    display:flex;justify-content:center;
+    min-height:100vh;min-height:100dvh;
+    overflow:hidden;
+  }
+  .device{
+    width:100%;height:100vh;height:100dvh;
+    background:var(--paper);
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  @media (min-width:820px) and (min-height:640px){
+    body{align-items:center;padding:26px 20px;}
+    .device{
+      max-width:760px;
+      height:min(880px, calc(100dvh - 52px));
+      border-radius:24px;
+      box-shadow:0 30px 70px -34px rgba(0,0,0,.38), 0 0 0 1px rgba(36,35,31,.07);
+    }
+  }
+  .topbar{
+    flex:0 0 auto;padding:14px 18px 12px;
+    padding-top:calc(env(safe-area-inset-top, 0px) + 14px);
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--rule);gap:8px;
+    background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0));
+  }
+  .topbar h1{
+    font-family:'Newsreader',serif;font-size:17px;font-weight:600;margin:0;
+    letter-spacing:.2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;
+  }
+  .topbar-right{display:flex;gap:6px;flex:0 0 auto;}
+  .mini-btn{
+    display:flex;align-items:center;gap:5px;padding:7px 11px;border-radius:10px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink-soft);
+    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;
+    white-space:nowrap;transition:background .15s,border-color .15s;
+  }
+  .mini-btn:hover{border-color:#CFC5AC;}
+  .mini-btn:active{background:var(--paper-dim);}
+  .mini-btn svg{width:13px;height:13px;}
+  .mini-btn.icon-only{padding:7px 9px;position:relative;}
+  .mini-btn .dot-on{width:7px;height:7px;border-radius:50%;background:#2F7A4A;
+    box-shadow:0 0 0 3px rgba(47,122,74,.15);}
+  .mini-btn .dot-off{width:7px;height:7px;border-radius:50%;background:#C6BFA8;}
+  .mini-btn .count-badge{
+    position:absolute;top:-3px;right:-3px;
+    min-width:15px;padding:1px 4px;
+    background:var(--fav);color:#fff;font-size:9.5px;font-weight:700;
+    border-radius:20px;line-height:1.35;text-align:center;
+    border:1.5px solid var(--paper);
+  }
+  .mini-btn .count-badge:empty{display:none;}
+
+  #banner{
+    flex:0 0 auto;display:none;padding:9px 18px;
+    background:linear-gradient(90deg, #FDF1D2 0%, #F7E6BD 100%);
+    color:#6E5323;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+    border-bottom:1px solid #E8D9A8;cursor:pointer;text-align:center;
+    align-items:center;justify-content:center;gap:6px;
+  }
+  #banner.show{display:flex;}
+  #banner svg{width:14px;height:14px;flex:0 0 auto;}
+  #banner:active{background:#F0DFB0;}
+
+  .reader{
+    flex:1 1 auto;overflow-y:auto;padding:24px 22px 90px;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  .reader-inner{max-width:620px;margin:0 auto;}
+  #articleBody{
+    font-family:'Newsreader',Georgia,serif;font-size:19px;line-height:1.85;color:var(--ink);
+  }
+  #articleBody .para{margin:0 0 20px;}
+  .sentence{border-radius:4px;transition:background .22s ease;}
+  .sentence.is-marked{background:var(--highlight-soft);box-shadow:0 0 0 2px var(--highlight-soft);}
+  .sentence.is-option{display:block;padding-left:1.4em;text-indent:-1.4em;margin-top:2px;}
+  .w{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    padding:0 1px;margin:0 -1px;border-radius:3px;}
+  .hint{font-size:12px;color:var(--ink-soft);text-align:center;margin:-4px 0 26px;
+    font-family:'Inter',sans-serif;line-height:1.7;}
+
+  #toolbar{
+    position:absolute;z-index:40;left:0;top:0;
+    max-width:340px;min-width:180px;
+    display:flex;flex-direction:column;
+    background:var(--toolbar);border-radius:14px;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.5);
+    opacity:0;transform:translate(-50%,6px) scale(.96);pointer-events:none;
+    transition:opacity .14s ease,transform .14s ease;
+    overflow:hidden;
+  }
+  #toolbar.show{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto;}
+  #toolbar::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;
+    background:var(--toolbar);transform:translateX(-50%) rotate(45deg);border-radius:2px;}
+  #toolbar.flip::after{bottom:auto;top:-5px;}
+  .tb-trans{
+    padding:0;max-height:0;overflow:hidden;
+    font-family:'Inter',sans-serif;
+    transition:max-height .18s ease,padding .18s ease;
+    color:rgba(247,243,234,.92);
+    border-bottom:0 solid rgba(255,255,255,.1);
+    word-break:break-word;
+  }
+  .tb-trans.show{
+    padding:10px 14px 9px;
+    max-height:120px;overflow-y:auto;
+    border-bottom-width:1px;
+    font-size:12.5px;line-height:1.55;
+  }
+  .tb-trans.loading{color:rgba(247,243,234,.55);font-style:italic;}
+  .tb-trans.err{color:rgba(255,180,180,.85);font-style:italic;}
+  .tb-icons{display:flex;gap:2px;padding:6px;justify-content:center;}
+  .tb-btn{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;color:var(--toolbar-text);
+    padding:7px 12px 6px;border-radius:9px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-size:10.5px;font-weight:500;line-height:1;white-space:nowrap;
+  }
+  .tb-btn:active{background:rgba(255,255,255,.14);}
+  .tb-btn svg{width:17px;height:17px;}
+  .tb-btn.ai{color:#FFD976;}
+  .tb-btn.fav .heart-fill{display:none;color:#FF8B92;}
+  .tb-btn.fav.is-on .heart-fill{display:block;}
+  .tb-btn.fav.is-on .heart-outline{display:none;}
+  .tb-btn.fav.is-on{color:#FF8B92;}
+
+  #wordPopup{
+    position:absolute;z-index:41;left:0;top:0;max-width:300px;
+    background:var(--paper);border:1px solid var(--rule);border-radius:14px;
+    padding:11px 14px;box-shadow:0 14px 28px -12px rgba(0,0,0,.35);
+    opacity:0;transform:translate(-50%,6px) scale(.96);pointer-events:none;
+    transition:opacity .14s ease,transform .14s ease;
+    display:flex;align-items:flex-start;gap:10px;
+  }
+  #wordPopup.show{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto;}
+  #wordPopup::after{content:"";position:absolute;left:50%;bottom:-5px;width:9px;height:9px;
+    background:var(--paper);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);
+    transform:translateX(-50%) rotate(45deg);}
+  #wordPopup.flip::after{bottom:auto;top:-5px;border:none;border-left:1px solid var(--rule);border-top:1px solid var(--rule);}
+  .wp-text{min-width:0;flex:1 1 auto;}
+  .wp-word{font-family:'Newsreader',serif;font-weight:600;font-size:16px;}
+  .wp-pos{font-size:10.5px;color:var(--ink-soft);font-style:italic;margin-left:5px;}
+  .wp-ipa{display:block;font-size:11px;color:var(--accent);margin-top:2px;}
+  .wp-meaning{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.5;}
+  .wp-source{display:block;font-size:9px;color:#9A9384;margin-top:5px;}
+  .wp-btn{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:none;
+    background:var(--paper-dim);color:var(--accent);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .wp-btn:active{background:#E1D8C2;}
+  .wp-btn svg{width:15px;height:15px;}
+  .wp-btn.playing{color:#2F7A4A;animation:pulseSpeak .9s ease-in-out infinite;}
+  .wp-btn.fav-word{color:#B8B2A4;}
+  .wp-btn.fav-word.is-on{color:var(--fav);}
+  .wp-btn.fav-word.is-on svg path{fill:var(--fav);stroke:var(--fav);}
+  @keyframes pulseSpeak{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  #scrim{position:absolute;inset:0;background:rgba(20,18,14,.42);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:50;}
+  #scrim.show{opacity:1;pointer-events:auto;}
+  #sheet{position:absolute;left:0;right:0;bottom:0;max-height:90%;
+    background:var(--paper);border-radius:24px 24px 0 0;
+    box-shadow:0 -20px 50px rgba(0,0,0,.3);
+    transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+    z-index:51;display:flex;flex-direction:column;overflow:hidden;}
+  #sheet.show{transform:translateY(0);}
+  @media (min-width:820px) and (min-height:640px){
+    #sheet{max-height:78%;}
+  }
+  .sheet-grab{width:36px;height:4px;background:var(--rule);border-radius:2px;margin:10px auto 4px;flex:0 0 auto;}
+  .sheet-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    padding:10px 18px 14px;font-family:'Inter',sans-serif;font-weight:700;font-size:15px;}
+  .sheet-head .title{display:flex;align-items:center;gap:7px;}
+  .sheet-head .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FFD976,#F2A63A);}
+  .sheet-close{width:28px;height:28px;border-radius:50%;border:none;background:var(--paper-dim);
+    color:var(--ink-soft);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .sheet-body{overflow-y:auto;padding:0 18px 26px;-webkit-overflow-scrolling:touch;}
+
+  .sentence-card{font-family:'Newsreader',serif;font-size:17.5px;line-height:1.75;
+    background:var(--paper-dim);border-radius:22px;padding:16px 18px;margin-bottom:12px;}
+  .sentence-card .chunk{padding:2px 4px;border-radius:5px;cursor:pointer;}
+  .chunk.group-main{background:var(--g-main-bg);}
+  .chunk.group-clause{background:var(--g-clause-bg);}
+  .chunk.group-phrase{background:var(--g-phrase-bg);}
+  .chunk.group-insert{background:var(--g-insert-bg);}
+  .chunk.is-active{outline:2px solid rgba(0,0,0,.18);}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .legend-item .sw{width:9px;height:9px;border-radius:3px;}
+  .legend-item.group-main .sw{background:var(--g-main);}
+  .legend-item.group-clause .sw{background:var(--g-clause);}
+  .legend-item.group-phrase .sw{background:var(--g-phrase);}
+  .legend-item.group-insert .sw{background:var(--g-insert);}
+
+  .translate-toggle{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:2px 2px 14px;cursor:pointer;}
+  .translate-toggle svg{width:13px;height:13px;transition:transform .2s ease;}
+  .translate-toggle.open svg{transform:rotate(180deg);}
+  .translation-text{display:none;font-size:14.5px;line-height:1.7;color:var(--ink-soft);
+    background:var(--paper-dim);border-radius:14px;padding:12px 14px;margin:-6px 0 16px;}
+  .translation-text.open{display:block;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:14px;}
+  .tab{flex:1;text-align:center;padding:10px 8px;border-radius:11px;border:1px solid var(--rule);
+    background:var(--paper);font-weight:600;font-size:13px;color:var(--ink-soft);cursor:pointer;}
+  .tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .pane{display:none;} .pane.active{display:block;}
+
+  .vocab-item{display:flex;justify-content:space-between;align-items:center;
+    padding:12px 4px;border-bottom:1px solid var(--rule);}
+  .vocab-item:last-child{border-bottom:none;}
+  .vocab-item .w{font-family:'Newsreader',serif;font-weight:600;font-size:16px;}
+  .vocab-item .m{color:var(--ink-soft);font-size:14px;flex:1 1 auto;text-align:right;margin-left:12px;}
+  .vocab-item .spk,
+  .vocab-item .v-fav{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:none;margin-left:6px;
+    background:var(--paper);color:var(--accent);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;}
+  .vocab-item .spk svg,
+  .vocab-item .v-fav svg{width:13px;height:13px;}
+  .vocab-item .spk:active,
+  .vocab-item .v-fav:active{background:#E1D8C2;}
+  .vocab-item .v-fav{color:#B8B2A4;}
+  .vocab-item .v-fav.is-on{color:var(--fav);}
+  .vocab-item .v-fav.is-on svg path{fill:var(--fav);stroke:var(--fav);}
+
+  .hint-tip{text-align:center;font-size:12px;color:var(--ink-soft);margin-bottom:12px;}
+  .explain-card{background:var(--paper-dim);border-left:3px solid var(--accent);
+    border-radius:0 14px 14px 0;padding:14px 16px;margin-top:2px;animation:fadeIn .18s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  .tagline{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:8px;}
+  .tagline.group-main{background:var(--g-main-bg);color:var(--g-main);}
+  .tagline.group-clause{background:var(--g-clause-bg);color:var(--g-clause);}
+  .tagline.group-phrase{background:var(--g-phrase-bg);color:var(--g-phrase);}
+  .tagline.group-insert{background:var(--g-insert-bg);color:var(--g-insert);}
+  .explain-card .chunk-text{font-family:'Newsreader',serif;font-size:16px;font-weight:600;margin-bottom:6px;}
+  .explain-card .desc{font-size:13.5px;line-height:1.6;color:var(--ink-soft);margin:0;}
+
+  .loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:50px 0 40px;
+    color:var(--ink-soft);font-size:13px;text-align:center;line-height:1.6;}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid var(--rule);
+    border-top-color:var(--accent);animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading .retry-btn{
+    margin-top:6px;padding:8px 18px;border-radius:10px;border:1px solid var(--rule);
+    background:var(--paper);color:var(--ink-soft);cursor:pointer;
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+  }
+  .loading .retry-btn:active{background:var(--paper-dim);}
+
+  .modal{
+    position:absolute;inset:0;z-index:100;background:rgba(20,18,14,.55);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .modal.show{opacity:1;pointer-events:auto;}
+  .modal-box{
+    width:100%;max-width:380px;max-height:92%;overflow-y:auto;
+    background:var(--paper);border-radius:20px;padding:20px 20px 18px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;}
+  .modal-head h2{font-family:'Newsreader',serif;font-size:18px;margin:0;}
+  .modal-close{
+    width:26px;height:26px;border-radius:50%;border:none;background:var(--paper-dim);
+    color:var(--ink-soft);font-size:14px;cursor:pointer;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .modal-close:active{background:#E1D8C2;}
+
+  .lib-list{max-height:52vh;overflow-y:auto;margin-top:14px;}
+  .lib-item{
+    display:flex;align-items:center;gap:8px;
+    padding:12px 12px;border-radius:12px;
+    border:1px solid var(--rule);background:var(--paper);
+    margin-bottom:8px;cursor:pointer;
+    transition:background .15s,border-color .15s;
+  }
+  .lib-item:hover{background:var(--paper-dim);}
+  .lib-item.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .lib-main{flex:1 1 auto;min-width:0;}
+  .lib-title{
+    font-family:'Newsreader',serif;font-weight:600;font-size:15px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .lib-meta{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .lib-item.active .lib-meta{color:rgba(247,243,234,.7);}
+  .lib-del{
+    flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:none;
+    background:transparent;color:var(--ink-soft);font-size:13px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lib-del:hover{background:rgba(181,74,62,.14);color:#B54A3E;}
+  .lib-item.active .lib-del{color:rgba(247,243,234,.7);}
+  .lib-item.active .lib-del:hover{background:rgba(255,255,255,.15);color:#fff;}
+  .lib-empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:30px 0;}
+
+  .lib-backup{
+    display:flex;gap:8px;margin-top:14px;padding-top:14px;
+    border-top:1px solid var(--rule);
+  }
+  .lib-backup button{
+    flex:1;padding:11px 8px;border-radius:11px;border:1px solid var(--rule);
+    background:var(--paper);font-family:'Inter',sans-serif;
+    font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+  }
+  .lib-backup button:hover{background:var(--paper-dim);}
+  .lib-backup button:active{background:#E8E1CF;}
+  .lib-backup button svg{width:14px;height:14px;}
+
+  .fav-tabs{display:flex;gap:5px;margin:12px 0 10px;flex-wrap:wrap;}
+  .fav-tab{flex:1 1 calc(50% - 3px);padding:8px 6px;border-radius:9px;
+    border:1px solid var(--rule);background:var(--paper);
+    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;text-align:center;white-space:nowrap;}
+  .fav-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .fav-tab .n{display:inline-block;min-width:14px;padding:0 4px;margin-left:3px;
+    background:rgba(0,0,0,.08);border-radius:20px;font-size:9.5px;}
+  .fav-tab.active .n{background:rgba(255,255,255,.2);}
+
+  .fav-list{max-height:56vh;overflow-y:auto;}
+  .fav-item{
+    display:flex;align-items:flex-start;gap:8px;
+    padding:11px 10px;border-radius:12px;
+    background:var(--paper-dim);margin-bottom:8px;
+    cursor:pointer;transition:background .15s;
+  }
+  .fav-item:hover{background:#E8E1CF;}
+  .fav-main{flex:1 1 auto;min-width:0;}
+  .fav-text{font-family:'Newsreader',serif;font-size:14.5px;line-height:1.55;word-break:break-word;}
+  .fav-meta{font-size:10.5px;color:#9A9384;margin-top:4px;}
+  .fav-word-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .fav-word{font-family:'Newsreader',serif;font-weight:600;font-size:16px;}
+  .fav-ipa{font-size:11px;color:var(--accent);}
+  .fav-pos{font-size:10.5px;color:var(--ink-soft);font-style:italic;}
+  .fav-meaning{font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:3px;}
+  .fav-actions{flex:0 0 auto;display:flex;flex-direction:column;gap:4px;}
+  .fav-icon{
+    width:26px;height:26px;border-radius:50%;border:none;
+    background:var(--paper);color:var(--ink-soft);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .fav-icon:hover{background:#E1D8C2;}
+  .fav-icon svg{width:13px;height:13px;}
+  .fav-icon.del:hover{background:rgba(181,74,62,.14);color:#B54A3E;}
+  .fav-icon.playing{color:#2F7A4A;animation:pulseSpeak .9s ease-in-out infinite;}
+  .fav-empty{text-align:center;color:var(--ink-soft);font-size:12.5px;padding:26px 0;}
+
+  .cfg-sub{font-size:12px;color:var(--ink-soft);margin:0 0 16px;line-height:1.6;}
+  .cfg-label{font-size:11.5px;font-weight:600;color:var(--ink-soft);margin:0 0 6px;display:block;}
+  .prov-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .prov-btn{flex:1 1 auto;min-width:70px;padding:9px 6px;border-radius:10px;
+    border:1px solid var(--rule);background:var(--paper);
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;white-space:nowrap;}
+  .prov-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .cfg-box input{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--rule);
+    background:var(--paper-dim);font-family:'Inter',sans-serif;font-size:12.5px;
+    color:var(--ink);outline:none;margin-bottom:12px;}
+  .cfg-box input:focus{border-color:var(--accent);}
+  .cfg-actions{display:flex;gap:8px;margin-top:6px;}
+  .cfg-actions button{flex:1;padding:12px;border-radius:11px;border:none;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .cfg-actions .later{background:var(--paper-dim);color:var(--ink-soft);}
+  .cfg-actions .save{background:var(--ink);color:var(--paper);}
+  .cfg-actions button:active{opacity:.85;}
+  .cfg-tip{font-size:11px;color:#9A9384;margin:10px 0 0;line-height:1.55;}
+  .cfg-tip a{color:var(--accent);text-decoration:none;}
+
+  .imp-tabs{display:flex;gap:6px;margin-bottom:14px;}
+  .imp-tab{flex:1;text-align:center;padding:9px 4px;border-radius:10px;border:1px solid var(--rule);
+    background:var(--paper);font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;
+    color:var(--ink-soft);cursor:pointer;white-space:nowrap;}
+  .imp-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .imp-pane{display:none;}
+  .imp-pane.active{display:block;}
+  .imp-pane textarea{
+    width:100%;min-height:170px;padding:12px;border-radius:12px;border:1px solid var(--rule);
+    background:var(--paper-dim);font-family:'Inter',sans-serif;font-size:13px;
+    line-height:1.6;color:var(--ink);outline:none;resize:vertical;
+  }
+  .imp-pane textarea:focus{border-color:var(--accent);}
+  .imp-pane input[type="url"]{
+    width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--rule);
+    background:var(--paper-dim);font-family:'Inter',sans-serif;font-size:13px;
+    color:var(--ink);outline:none;
+  }
+  .imp-pane input[type="url"]:focus{border-color:var(--accent);}
+  .imp-hint{font-size:11px;color:#9A9384;margin:9px 2px 0;line-height:1.55;}
+  .drop{
+    border:2px dashed var(--rule);border-radius:14px;padding:26px 16px;text-align:center;
+    font-family:'Inter',sans-serif;font-size:12.5px;color:var(--ink-soft);
+    cursor:pointer;transition:border-color .15s,background .15s;line-height:1.6;
+  }
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--paper-dim);}
+  .drop strong{color:var(--ink);display:block;margin-bottom:4px;font-size:13.5px;}
+  .drop .formats{font-size:11px;color:#9A9384;margin-top:8px;}
+  .imp-actions{display:flex;gap:8px;margin-top:14px;}
+  .imp-actions button{flex:1;padding:11px;border-radius:11px;border:none;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
+  .imp-actions .cancel{background:var(--paper-dim);color:var(--ink-soft);}
+  .imp-actions .primary{background:var(--ink);color:var(--paper);}
+  .imp-actions button:active{opacity:.85;}
+  .imp-actions button:disabled{opacity:.45;cursor:default;}
+  .imp-msg{margin-top:10px;font-size:11.5px;color:var(--ink-soft);min-height:16px;line-height:1.5;}
+  .imp-msg.err{color:#B54A3E;}
+
+  #aiProgress{
+    position:absolute;z-index:46;left:50%;bottom:18px;
+    transform:translate(-50%,16px);
+    display:flex;align-items:center;gap:9px;
+    background:rgba(26,25,23,.93);color:#F7F3EA;
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
+    padding:9px 10px 9px 14px;border-radius:22px;
+    box-shadow:0 12px 30px -10px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;
+    transition:opacity .22s ease,transform .22s ease;
+    max-width:calc(100% - 32px);
+  }
+  #aiProgress.show{opacity:1;pointer-events:auto;transform:translate(-50%,0);}
+  #aiProgress .ai-spin{
+    width:13px;height:13px;border-radius:50%;flex:0 0 auto;
+    border:2px solid rgba(247,243,234,.3);border-top-color:#FFD976;
+    animation:spin .8s linear infinite;
+  }
+  #aiProgress .ai-ptext{
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #aiProgress button{
+    flex:0 0 auto;border:none;border-radius:14px;
+    background:rgba(255,255,255,.14);color:#F7F3EA;
+    font-family:'Inter',sans-serif;font-size:11px;font-weight:600;
+    padding:5px 10px;cursor:pointer;
+  }
+  #aiProgress button:active{background:rgba(255,255,255,.26);}
+
+  #toast{
+    position:fixed;left:50%;bottom:38px;transform:translate(-50%,14px);
+    background:rgba(26,25,23,.93);color:#F7F3EA;
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+    padding:11px 20px;border-radius:22px;z-index:9998;
+    opacity:0;pointer-events:none;
+    transition:opacity .22s ease,transform .22s ease;
+    box-shadow:0 12px 30px -10px rgba(0,0,0,.5);
+    max-width:80vw;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+
+  /* ---- 重点词汇：搭配标签 ---- */
+  .vocab-tag{
+    display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;
+    background:var(--g-phrase-bg);color:var(--g-phrase);border-radius:20px;
+    margin-left:6px;vertical-align:middle;font-family:'Inter',sans-serif;
+    font-style:normal;letter-spacing:.2px;
+  }
+  .vocab-item.is-phrase .w{font-style:italic;}
+
+  /* ---- 二级拆解 ---- */
+  .sub-list{margin-top:12px;border-top:1px dashed var(--rule);padding-top:10px;}
+  .sub-item{
+    padding:8px 10px;margin-bottom:8px;border-radius:0 10px 10px 0;
+    border-left:3px solid var(--rule);
+  }
+  .sub-item.group-main{border-left-color:var(--g-main);background:rgba(47,93,66,.05);}
+  .sub-item.group-clause{border-left-color:var(--g-clause);background:rgba(44,74,115,.05);}
+  .sub-item.group-phrase{border-left-color:var(--g-phrase);background:rgba(122,80,35,.05);}
+  .sub-item.group-insert{border-left-color:var(--g-insert);background:rgba(110,63,118,.05);}
+  .sub-head{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;}
+  .sub-tag{
+    font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;
+    font-family:'Inter',sans-serif;
+  }
+  .sub-tag.group-main{background:var(--g-main-bg);color:var(--g-main);}
+  .sub-tag.group-clause{background:var(--g-clause-bg);color:var(--g-clause);}
+  .sub-tag.group-phrase{background:var(--g-phrase-bg);color:var(--g-phrase);}
+  .sub-tag.group-insert{background:var(--g-insert-bg);color:var(--g-insert);}
+  .sub-role{font-size:11px;color:var(--ink-soft);font-style:italic;}
+  .sub-text{
+    font-family:'Newsreader',serif;font-size:14.5px;font-weight:600;
+    margin-bottom:2px;word-break:break-word;
+  }
+  .sub-desc{font-size:12.5px;line-height:1.55;color:var(--ink-soft);}
+  .sub-btn{
+    display:block;width:100%;margin-top:12px;padding:10px 12px;
+    border-radius:11px;border:1px dashed var(--rule);background:var(--paper);
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+    color:var(--accent);cursor:pointer;text-align:center;
+  }
+  .sub-btn:hover{background:var(--paper-dim);border-style:solid;}
+  .sub-btn:disabled{opacity:.6;cursor:default;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<div class="device" id="device">
+
+  <div class="topbar">
+    <h1 id="docTitle">面料与街区</h1>
+    <div class="topbar-right">
+      <button class="mini-btn" id="importBtn" title="导入文章">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+        </svg>
+        导入
+      </button>
+      <button class="mini-btn icon-only" id="libBtn" title="我的文章">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+      </button>
+      <button class="mini-btn icon-only" id="favBtn" title="收藏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>
+        </svg>
+        <span class="count-badge" id="favCount"></span>
+      </button>
+      <button class="mini-btn icon-only" id="cfgBtn" title="AI 配置">
+        <span class="dot-off" id="cfgDot"></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.01"/>
+    </svg>
+    <span>还没配置 AI 接口，点击这里填 Key →</span>
+  </div>
+
+  <div class="reader" id="reader">
+    <div class="reader-inner">
+      <div id="articleBody"></div>
+      <div class="hint">👆 长按任意位置 → 吸附整句并弹出工具栏（带译文）；单击某个单词 → AI 释义 + 发音</div>
+    </div>
+  </div>
+
+  <div id="toolbar">
+    <div class="tb-trans" id="tbTrans"></div>
+    <div class="tb-icons">
+      <button class="tb-btn" data-action="copy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>
+        <span class="lbl">复制</span>
+      </button>
+      <button class="tb-btn fav" data-action="fav">
+        <svg class="heart-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>
+        </svg>
+        <svg class="heart-fill" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+          <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>
+        </svg>
+        <span class="lbl">收藏</span>
+      </button>
+      <button class="tb-btn ai" data-action="explain">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z"/></svg>
+        <span class="lbl">AI讲解</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="wordPopup">
+    <div class="wp-text">
+      <span class="wp-word" id="wpWord"></span><span class="wp-pos" id="wpPos"></span>
+      <span class="wp-ipa" id="wpIpa"></span>
+      <span class="wp-meaning" id="wpMeaning"></span>
+      <span class="wp-source" id="wpSource"></span>
+    </div>
+    <button class="wp-btn fav-word" id="wpFav" aria-label="收藏单词">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>
+      </svg>
+    </button>
+    <button class="wp-btn" id="wpSpeak" aria-label="发音">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="scrim"></div>
+  <div id="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div class="title"><span class="dot"></span>AI 讲解</div>
+      <button class="sheet-close" id="closeSheet">✕</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+
+  <div class="modal" id="libModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>我的文章</h2>
+        <button class="modal-close" id="libClose">✕</button>
+      </div>
+      <p class="cfg-sub">点击切换。已解析过的句子读本地缓存，不再调用 AI。</p>
+      <div class="lib-list" id="libList"></div>
+      <div class="lib-backup">
+        <button id="expBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+          </svg>
+          导出备份
+        </button>
+        <button id="impBackupBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>
+          </svg>
+          导入备份
+        </button>
+      </div>
+      <input type="file" id="impBackupFile" accept=".json,application/json" style="display:none">
+    </div>
+  </div>
+
+  <div class="modal" id="favModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>收藏与复习</h2>
+        <button class="modal-close" id="favClose">✕</button>
+      </div>
+      <div class="fav-tabs" id="favTabs">
+        <button class="fav-tab active" data-scope="this" data-type="sentence">本篇 · 句子<span class="n" id="n-this-sentence">0</span></button>
+        <button class="fav-tab" data-scope="this" data-type="word">本篇 · 词汇<span class="n" id="n-this-word">0</span></button>
+        <button class="fav-tab" data-scope="all" data-type="sentence">全部 · 句子<span class="n" id="n-all-sentence">0</span></button>
+        <button class="fav-tab" data-scope="all" data-type="word">全部 · 词汇<span class="n" id="n-all-word">0</span></button>
+      </div>
+      <div class="fav-list" id="favList"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="cfgModal">
+    <div class="modal-box cfg-box">
+      <div class="modal-head">
+        <h2>配置 AI 接口</h2>
+        <button class="modal-close" id="cfgClose">✕</button>
+      </div>
+      <p class="cfg-sub">单词释义、句子讲解都走 AI。发音走免费 TTS，不需要 Key。</p>
+      <label class="cfg-label">选择平台</label>
+      <div class="prov-row" id="provRow">
+        <button class="prov-btn active" data-prov="openrouter">OpenRouter</button>
+        <button class="prov-btn" data-prov="deepseek">DeepSeek</button>
+        <button class="prov-btn" data-prov="siliconflow">硅基流动</button>
+        <button class="prov-btn" data-prov="custom">自定义</button>
+      </div>
+      <label class="cfg-label">API Key</label>
+      <input type="password" id="cfgKey" placeholder="粘贴你的 API Key" autocomplete="off">
+      <label class="cfg-label">接口地址</label>
+      <input type="text" id="cfgEndpoint" autocomplete="off">
+      <label class="cfg-label">模型名称</label>
+      <input type="text" id="cfgModel" autocomplete="off">
+      <div class="cfg-actions">
+        <button class="later" id="cfgLater">稍后配置</button>
+        <button class="save" id="cfgSave">保存</button>
+      </div>
+      <p class="cfg-tip" id="cfgTip"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="impModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>导入文章</h2>
+        <button class="modal-close" id="impClose">✕</button>
+      </div>
+      <p class="cfg-sub">导入后自动分段分句，并调用 AI 解析全文（可随时停止）。</p>
+
+      <div class="imp-tabs">
+        <div class="imp-tab active" data-tab="paste">粘贴文本</div>
+        <div class="imp-tab" data-tab="url">网页链接</div>
+        <div class="imp-tab" data-tab="file">上传文件</div>
+      </div>
+
+      <div class="imp-pane active" id="impPanePaste">
+        <textarea id="impText" placeholder="把英语（或中英混排）文章粘贴到这里，段落之间用空行分隔。"></textarea>
+      </div>
+
+      <div class="imp-pane" id="impPaneUrl">
+        <input type="url" id="impUrl" placeholder="https://example.com/article" autocomplete="off" spellcheck="false">
+        <p class="imp-hint">通过公共代理抓取网页正文，部分有反爬的站点可能失败，可改用「粘贴文本」。</p>
+      </div>
+
+      <div class="imp-pane" id="impPaneFile">
+        <div class="drop" id="impDrop">
+          <strong>点击选择文件，或拖到这里</strong>
+          支持 .txt 和 .docx
+          <div class="formats">.doc 请另存为 .docx；不支持 PDF</div>
+        </div>
+        <input type="file" id="impFile" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
+      </div>
+
+      <div class="imp-msg" id="impMsg"></div>
+
+      <div class="imp-actions">
+        <button class="cancel" id="impCancel">取消</button>
+        <button class="primary" id="impConfirm">导入</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="aiProgress">
+    <span class="ai-spin"></span>
+    <span class="ai-ptext" id="aiProgressText">AI 正在解析全文…</span>
+    <button id="aiProgressStop">停止</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   0. 平台预设 & 常量
+   ============================================================ */
+var PROVIDERS = {
+  openrouter: {
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    model: 'deepseek/deepseek-chat-v3.1:free',
+    tip: '推荐。注册后到 <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">Keys 页面</a>创建 Key。'
+  },
+  deepseek: {
+    endpoint: 'https://api.deepseek.com/v1/chat/completions',
+    model: 'deepseek-chat',
+    tip: '在 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek 开放平台</a>创建 Key。'
+  },
+  siliconflow: {
+    endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
+    model: 'Qwen/Qwen2.5-7B-Instruct',
+    tip: '在 <a href="https://cloud.siliconflow.cn/account/ak" target="_blank" rel="noopener">硅基流动控制台</a>创建 Key。'
+  },
+  custom: { endpoint: '', model: '', tip: '填入任何兼容 OpenAI 格式的接口。' }
+};
+
+var VALID_TAGS = ['main','subj_clause','obj_clause','pred_clause','attr_clause','adv_clause',
+                  'prep_phrase','inf_phrase','ppl_phrase','appositive','parenthetical'];
+
+var CFG_KEY = 'reader_ai_cfg_v2';
+var LEGACY_LIB_KEY = 'reader_lib_v2';
+var WORD_KEY = 'reader_word_cache_v1';
+var DB_NAME = 'reader_db_v3';
+var DB_STORE = 'kv';
+var DB_LIB_KEY = 'library';
+
+var AI_TIMEOUT_MS = 30000;
+var AI_MAX_RETRY = 2;
+var AI_MAX_TOKENS = 1400;
+
+/* 全文预解析参数 */
+var PRE_BATCH = 4;              // 每批送给 AI 的句子数
+var PRE_MAX_SENTENCES = 150;    // 单篇最多预解析句数（防止失控）
+var PRE_BATCH_DELAY = 150;      // 批次间隔
+var PRE_TIMEOUT_MS = 60000;
+var PRE_MAX_TOKENS = 5000;
+
+/* 二级拆解触发阈值 */
+var SUB_MIN_WORDS = 8;
+var SUB_MIN_CHARS = 45;
+
+/* ============================================================
+   1. IndexedDB 封装
+   ============================================================ */
+var dbPromise = null;
+var idbFailed = false;
+
+function openDB(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise(function(resolve, reject){
+    if(!window.indexedDB){ reject(new Error('IndexedDB 不支持')); return; }
+    var req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function(){
+      var db = req.result;
+      if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+    };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error || new Error('IDB 打开失败')); };
+  });
+  return dbPromise;
+}
+function idbGet(key){
+  return openDB().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(DB_STORE, 'readonly');
+      var req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  });
+}
+function idbSet(key, val){
+  return openDB().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(DB_STORE, 'readwrite');
+      var req = tx.objectStore(DB_STORE).put(val, key);
+      req.onsuccess = function(){ resolve(); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  });
+}
+
+/* ============================================================
+   2. 通用工具
+   ============================================================ */
+function lsGet(key, def){
+  try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+  catch(e){ return def; }
+}
+function lsSet(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch(e){ return false; }
+}
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+function cacheKey(s){ return String(s || '').replace(/\s+/g, ' ').trim(); }
+function normalizeWord(w){
+  return String(w || '').toLowerCase().replace(/[^a-z'’-]/g, '')
+    .replace(/['’]s$/, '').replace(/^-+|-+$/g, '').trim();
+}
+function newArticleId(){
+  return 'a_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+function fmtTime(ts){
+  try{
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }catch(e){ return ''; }
+}
+
+var toastTimer = null;
+function toast(msg){
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 1900);
+}
+
+/* ============================================================
+   3. 文章库
+   ============================================================ */
+var DEFAULT_TITLE = '面料与街区';
+var DEFAULT_PARAGRAPHS = [
+  [
+    "When it comes to fabric shopping, nothing can quite replace the experience of visiting a local store, where the knowledge shared among staff and customers is almost as valuable as the fabric itself.",
+    "It's a lesson more people are learning as small fabric shops close."
+  ],
+  [
+    "Neighbourhoods with a rich history of textiles, such as Montreal's St. Hubert Street, remain popular with makers.",
+    "Fabricland, Canada's largest fabric store chain, is growing strong with around 100 stores across the country.",
+    "What keeps a fabric shop alive is that the staff actually know the material inside out."
+  ]
+];
+
+var TAG_META = {
+  main:{label:'主干',group:'main'},
+  subj_clause:{label:'主语从句',group:'clause'},
+  obj_clause:{label:'宾语从句',group:'clause'},
+  pred_clause:{label:'表语从句',group:'clause'},
+  attr_clause:{label:'定语从句',group:'clause'},
+  adv_clause:{label:'状语从句',group:'clause'},
+  prep_phrase:{label:'介词短语',group:'phrase'},
+  inf_phrase:{label:'不定式短语',group:'phrase'},
+  ppl_phrase:{label:'分词短语',group:'phrase'},
+  appositive:{label:'同位语',group:'insert'},
+  parenthetical:{label:'插入语',group:'insert'}
+};
+function tagMeta(t){ return TAG_META[t] || TAG_META.main; }
+
+var library = { articles: [], currentId: null };
+var state = { title: DEFAULT_TITLE, paragraphs: [] };
+var WORD_CACHE = lsGet(WORD_KEY, {});
+
+function normalizeArticle(a){
+  if(!a) return a;
+  if(!a.paragraphs){
+    if(Array.isArray(a.sentences)) a.paragraphs = a.sentences.map(function(s){ return [s]; });
+    else a.paragraphs = [];
+    delete a.sentences;
+  }
+  if(!Array.isArray(a.paragraphs)) a.paragraphs = [];
+  if(!a.explain || typeof a.explain !== 'object') a.explain = {};
+  if(!Array.isArray(a.savedSentences)) a.savedSentences = [];
+  if(!Array.isArray(a.savedWords)) a.savedWords = [];
+  return a;
+}
+
+function currentArticle(){
+  if(!library.currentId) return null;
+  for(var i = 0; i < library.articles.length; i++){
+    if(library.articles[i].id === library.currentId) return library.articles[i];
+  }
+  return null;
+}
+function findArticle(id){
+  for(var i = 0; i < library.articles.length; i++){
+    if(library.articles[i].id === id) return library.articles[i];
+  }
+  return null;
+}
+function createArticle(title, paragraphs){
+  var a = {
+    id: newArticleId(),
+    title: title || '未命名文章',
+    paragraphs: paragraphs.map(function(p){ return p.slice(); }),
+    explain: {},
+    savedSentences: [],
+    savedWords: [],
+    createdAt: Date.now(),
+    lastRead: Date.now()
+  };
+  library.articles.unshift(a);
+  library.currentId = a.id;
+  saveLibraryNow();
+  return a;
+}
+
+/* ---- IDB 持久化（防抖 + 兜底） ---- */
+var saveTimer = null;
+function saveLibrary(){
+  if(idbFailed){
+    lsSet(LEGACY_LIB_KEY, library);
+    return;
+  }
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    saveTimer = null;
+    idbSet(DB_LIB_KEY, library).catch(function(err){
+      console.warn('IDB 保存失败，回退 localStorage', err);
+      idbFailed = true;
+      if(!lsSet(LEGACY_LIB_KEY, library)) toast('本地存储已满，保存失败');
+    });
+  }, 250);
+}
+function saveLibraryNow(){
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  if(idbFailed){ lsSet(LEGACY_LIB_KEY, library); return; }
+  idbSet(DB_LIB_KEY, library).catch(function(err){
+    console.warn('IDB 立即保存失败', err);
+    idbFailed = true;
+    lsSet(LEGACY_LIB_KEY, library);
+  });
+}
+
+function loadLibraryAsync(){
+  return idbGet(DB_LIB_KEY).then(function(data){
+    if(data && Array.isArray(data.articles)){
+      library = data;
+      library.articles = library.articles.map(normalizeArticle);
+      if(!Array.isArray(library.articles)) library.articles = [];
+      return true;
+    }
+    // 迁移：从 localStorage 搬到 IDB
+    var legacy = lsGet(LEGACY_LIB_KEY, null);
+    if(legacy && Array.isArray(legacy.articles)){
+      library = legacy;
+      library.articles = library.articles.map(normalizeArticle);
+      idbSet(DB_LIB_KEY, library).then(function(){
+        try{ localStorage.removeItem(LEGACY_LIB_KEY); }catch(e){}
+      });
+      return true;
+    }
+    return false;
+  }).catch(function(err){
+    console.warn('IDB 读取失败，回退 localStorage', err);
+    idbFailed = true;
+    var legacy = lsGet(LEGACY_LIB_KEY, null);
+    if(legacy && Array.isArray(legacy.articles)){
+      library = legacy;
+      library.articles = library.articles.map(normalizeArticle);
+      return true;
+    }
+    return false;
+  });
+}
+
+/* 页面隐藏/关闭前强制落盘 */
+window.addEventListener('pagehide', function(){ saveLibraryNow(); });
+window.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden') saveLibraryNow();
+});
+
+/* ---- 单词缓存 ---- */
+function persistWords(){
+  var keys = Object.keys(WORD_CACHE);
+  if(keys.length > 600){
+    for(var i = 0; i < keys.length - 500; i++) delete WORD_CACHE[keys[i]];
+  }
+  lsSet(WORD_KEY, WORD_CACHE);
+}
+
+/* ============================================================
+   4. DOM 引用
+   ============================================================ */
+var $ = function(id){ return document.getElementById(id); };
+var device     = $('device');
+var reader     = $('reader');
+var articleBody= $('articleBody');
+var docTitle   = $('docTitle');
+var toolbar    = $('toolbar');
+var tbTrans    = $('tbTrans');
+var wordPopup  = $('wordPopup');
+var wpWord     = $('wpWord');
+var wpPos      = $('wpPos');
+var wpIpa      = $('wpIpa');
+var wpMeaning  = $('wpMeaning');
+var wpSource   = $('wpSource');
+var wpSpeak    = $('wpSpeak');
+var wpFav      = $('wpFav');
+var scrim      = $('scrim');
+var sheet      = $('sheet');
+var sheetBody  = $('sheetBody');
+var cfgModal   = $('cfgModal');
+var cfgKey     = $('cfgKey');
+var cfgEndpoint= $('cfgEndpoint');
+var cfgModel   = $('cfgModel');
+var cfgSave    = $('cfgSave');
+var cfgLater   = $('cfgLater');
+var cfgClose   = $('cfgClose');
+var cfgTip     = $('cfgTip');
+var cfgDot     = $('cfgDot');
+var banner     = $('banner');
+var impModal   = $('impModal');
+var impText    = $('impText');
+var impUrl     = $('impUrl');
+var impDrop    = $('impDrop');
+var impFile    = $('impFile');
+var impMsg     = $('impMsg');
+var impConfirm = $('impConfirm');
+var impCancel  = $('impCancel');
+var impClose   = $('impClose');
+var libModal   = $('libModal');
+var libList    = $('libList');
+var libClose   = $('libClose');
+var favModal   = $('favModal');
+var favClose   = $('favClose');
+var favList    = $('favList');
+var favTabs    = $('favTabs');
+var favCount   = $('favCount');
+var aiProgressEl   = $('aiProgress');
+var aiProgressText = $('aiProgressText');
+var aiProgressStop = $('aiProgressStop');
+
+var currentSentenceText = '';
+var currentToolbarRect  = null;
+var currentProvider = 'openrouter';
+var pendingFileText = null;
+var currentExplainText = '';
+
+/* ============================================================
+   5. 配置
+   ============================================================ */
+function loadCfg(){ return lsGet(CFG_KEY, null); }
+function saveCfg(o){ lsSet(CFG_KEY, o); }
+function getCfg(){
+  var c = loadCfg();
+  return (c && c.key && c.endpoint && c.model) ? c : null;
+}
+function refreshStatus(){
+  if(getCfg()){
+    cfgDot.className = 'dot-on';
+    banner.classList.remove('show');
+  } else {
+    cfgDot.className = 'dot-off';
+    banner.classList.add('show');
+  }
+}
+function applyProvider(prov){
+  currentProvider = prov;
+  var p = PROVIDERS[prov] || PROVIDERS.custom;
+  var btns = document.querySelectorAll('.prov-btn');
+  for(var i = 0; i < btns.length; i++){
+    btns[i].classList.toggle('active', btns[i].getAttribute('data-prov') === prov);
+  }
+  cfgEndpoint.value = p.endpoint;
+  cfgModel.value = p.model;
+  cfgTip.innerHTML = p.tip + '<br>配置只保存在本地浏览器。';
+}
+(function bindProvBtns(){
+  var btns = document.querySelectorAll('.prov-btn');
+  for(var i = 0; i < btns.length; i++){
+    (function(btn){
+      btn.addEventListener('click', function(){ applyProvider(btn.getAttribute('data-prov')); });
+    })(btns[i]);
+  }
+})();
+cfgSave.addEventListener('click', function(){
+  var key = cfgKey.value.trim();
+  var ep = cfgEndpoint.value.trim();
+  var md = cfgModel.value.trim();
+  if(!key){ alert('请填写 API Key'); cfgKey.focus(); return; }
+  if(!ep || !md){ alert('请填写接口地址和模型名称'); return; }
+  saveCfg({ provider: currentProvider, key: key, endpoint: ep, model: md });
+  cfgModal.classList.remove('show');
+  refreshStatus();
+  toast('配置已保存 ✓');
+});
+function openCfg(){
+  var c = loadCfg();
+  if(c){
+    applyProvider(c.provider || 'custom');
+    cfgKey.value = c.key || '';
+    if(c.endpoint) cfgEndpoint.value = c.endpoint;
+    if(c.model) cfgModel.value = c.model;
+  } else {
+    applyProvider('openrouter');
+    cfgKey.value = '';
+  }
+  cfgModal.classList.add('show');
+}
+$('cfgBtn').addEventListener('click', openCfg);
+banner.addEventListener('click', openCfg);
+cfgLater.addEventListener('click', function(){ cfgModal.classList.remove('show'); });
+cfgClose.addEventListener('click', function(){ cfgModal.classList.remove('show'); });
+cfgModal.addEventListener('click', function(e){
+  if(e.target === cfgModal) cfgModal.classList.remove('show');
+});
+
+/* ============================================================
+   6. AI 调用：超时 + 去重 + 重试 + maxTokens
+   ============================================================ */
+var aiInflight = {};
+
+function aiRequestKey(messages, maxTokens){
+  try{ return JSON.stringify(messages) + '#' + (maxTokens || ''); }
+  catch(e){ return String(Date.now()); }
+}
+function isRetryable(err){
+  var m = String((err && err.message) || '');
+  return /429|5\d\d|timeout|超时|Failed to fetch|NetworkError|network/i.test(m);
+}
+function doCallOnce(messages, timeoutMs, maxTokens){
+  var cfg = getCfg();
+  if(!cfg) return Promise.reject(new Error('请先配置 AI 接口'));
+
+  var ctrl = ('AbortController' in window) ? new AbortController() : null;
+  var timer = setTimeout(function(){
+    if(ctrl) try { ctrl.abort(); } catch(e){}
+  }, timeoutMs);
+
+  var opts = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: messages,
+      temperature: 0.3,
+      max_tokens: maxTokens || AI_MAX_TOKENS
+    })
+  };
+  if(ctrl) opts.signal = ctrl.signal;
+
+  return fetch(cfg.endpoint, opts)
+    .then(function(res){
+      clearTimeout(timer);
+      return res.json().then(function(data){
+        if(!res.ok){
+          var msg = (data && data.error && data.error.message) || ('HTTP ' + res.status);
+          throw new Error(msg);
+        }
+        return data;
+      });
+    })
+    .then(function(data){
+      var content = '';
+      try { content = data.choices[0].message.content || ''; }
+      catch(e){ throw new Error('AI 返回格式异常'); }
+      return content;
+    })
+    .catch(function(err){
+      clearTimeout(timer);
+      if(err && err.name === 'AbortError') throw new Error('AI 请求超时');
+      throw err;
+    });
+}
+function doCallWithRetry(messages, timeoutMs, retriesLeft, maxTokens){
+  return doCallOnce(messages, timeoutMs, maxTokens).catch(function(err){
+    if(retriesLeft > 0 && isRetryable(err)){
+      var delay = (AI_MAX_RETRY - retriesLeft + 1) * 900;
+      return new Promise(function(resolve){ setTimeout(resolve, delay); })
+        .then(function(){ return doCallWithRetry(messages, timeoutMs, retriesLeft - 1, maxTokens); });
+    }
+    throw err;
+  });
+}
+function callAI(messages, onSuccess, onError, opts){
+  opts = opts || {};
+  var timeoutMs = opts.timeout || AI_TIMEOUT_MS;
+  var retries = (opts.retries != null) ? opts.retries : AI_MAX_RETRY;
+  var maxTokens = opts.maxTokens || AI_MAX_TOKENS;
+  var key = aiRequestKey(messages, maxTokens);
+
+  // 去重：同参数请求合并
+  if(aiInflight[key]){
+    aiInflight[key].then(onSuccess).catch(onError);
+    return;
+  }
+
+  var p = doCallWithRetry(messages, timeoutMs, retries, maxTokens);
+  aiInflight[key] = p;
+
+  p.then(function(content){
+    delete aiInflight[key];
+    onSuccess(content);
+  }).catch(function(err){
+    delete aiInflight[key];
+    onError(err);
+  });
+}
+
+/* ============================================================
+   7. JSON 提取 + Schema 校验
+   ============================================================ */
+function extractJSON(text){
+  if(!text) return null;
+  var cleaned = String(text).replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  var s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
+  if(s !== -1 && e > s){
+    try { return JSON.parse(cleaned.slice(s, e + 1)); } catch(err){}
+  }
+  var as = cleaned.indexOf('['), ae = cleaned.lastIndexOf(']');
+  if(as !== -1 && ae > as){
+    try { return JSON.parse(cleaned.slice(as, ae + 1)); } catch(err){}
+  }
+  return null;
+}
+function validateExplain(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  var out = { translation: '', vocab: [], structure: [] };
+
+  if(typeof raw.translation === 'string') out.translation = raw.translation.trim();
+
+  if(Array.isArray(raw.vocab)){
+    for(var i = 0; i < raw.vocab.length && out.vocab.length < 8; i++){
+      var v = raw.vocab[i];
+      if(!v) continue;
+      var w = String(v.w || '').trim();
+      var m = String(v.m || '').trim();
+      if(!w || !m) continue;
+      var tp = String(v.type || 'word').toLowerCase();
+      if(tp !== 'phrase') tp = 'word';
+      out.vocab.push({ w: w, m: m, type: tp });
+    }
+  }
+
+  if(Array.isArray(raw.structure)){
+    for(var j = 0; j < raw.structure.length; j++){
+      var c = raw.structure[j];
+      if(!c) continue;
+      var text = String(c.text || '').trim();
+      if(!text) continue;
+      var tag = String(c.tag || 'main');
+      if(VALID_TAGS.indexOf(tag) === -1) tag = 'main';
+      out.structure.push({
+        text: text,
+        tag: tag,
+        role: String(c.role || '').trim(),
+        desc: String(c.desc || '').trim(),
+        sub: []
+      });
+    }
+  }
+
+  if(!out.structure.length) return null;
+  return out;
+}
+
+/* ============================================================
+   8. 免费翻译（长按工具栏译文）
+   ============================================================ */
+var TRANS_CACHE = {};
+function translateText(text){
+  var key = cacheKey(text);
+  if(!key) return Promise.resolve('');
+  if(TRANS_CACHE[key]) return Promise.resolve(TRANS_CACHE[key]);
+
+  var q = encodeURIComponent(text);
+  var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=' + q;
+
+  return fetch(url)
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      if(!data || !Array.isArray(data[0])) throw new Error('格式异常');
+      var s = data[0].map(function(p){ return (p && p[0]) || ''; }).join('').trim();
+      if(!s) throw new Error('空结果');
+      TRANS_CACHE[key] = s;
+      return s;
+    })
+    .catch(function(){
+      var mm = 'https://api.mymemory.translated.net/get?q=' +
+        encodeURIComponent(text.slice(0, 480)) + '&langpair=en|zh-CN';
+      return fetch(mm).then(function(r){ return r.json(); })
+        .then(function(data){
+          var s = (data && data.responseData && data.responseData.translatedText) || '';
+          s = s.trim();
+          if(s) TRANS_CACHE[key] = s;
+          return s;
+        });
+    });
+}
+
+/* ============================================================
+   9. 词典兜底 & 单词查询
+   ============================================================ */
+var DICT_BASE = 'https://api.dictionaryapi.dev/api/v2/entries/en/';
+function fetchDictFallback(word){
+  var key = normalizeWord(word);
+  if(!key) return Promise.reject(new Error('无效单词'));
+  return fetch(DICT_BASE + encodeURIComponent(key))
+    .then(function(res){
+      if(res.status === 404) throw new Error('未找到该词');
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data){
+      if(!Array.isArray(data) || !data.length) throw new Error('无释义');
+      var e = data[0] || {};
+      var ipa = e.phonetic || '';
+      var audio = '';
+      var phs = e.phonetics || [];
+      for(var i = 0; i < phs.length; i++){
+        if(!ipa && phs[i].text) ipa = phs[i].text;
+        if(!audio && phs[i].audio) audio = phs[i].audio;
+      }
+      var pos = '', meaning = '';
+      var ms = e.meanings || [];
+      for(var m = 0; m < ms.length && !meaning; m++){
+        var ds = ms[m].definitions || [];
+        if(ds.length && ds[0].definition){
+          pos = ms[m].partOfSpeech || '';
+          meaning = ds[0].definition;
+        }
+      }
+      return { ipa: ipa, audio: audio, pos: pos, meaning: meaning || '暂无释义', source: 'dictionaryapi.dev' };
+    });
+}
+function lookupWord(word){
+  var key = normalizeWord(word);
+  if(!key) return Promise.reject(new Error('无效单词'));
+  if(WORD_CACHE[key]) return Promise.resolve(WORD_CACHE[key]);
+
+  var cfg = getCfg();
+  if(!cfg){
+    return fetchDictFallback(word).then(function(r){
+      WORD_CACHE[key] = r; persistWords();
+      syncSavedWord(key, r);
+      return r;
+    });
+  }
+  var prompt = [
+    { role: 'system', content:
+      '你是一个英语词典助手。用户会给你一个英语单词。请返回严格的 JSON，不要任何多余文字，格式如下：' +
+      '{"pos":"词性缩写(如 n. / v. / adj. / adv.)","ipa":"音标(带斜杠，如 /ˈfæbrɪk/)","meaning":"中文释义(简洁，一句话)"}。' +
+      '如果单词有多个词性，只取最常用的一个。' },
+    { role: 'user', content: key }
+  ];
+  return new Promise(function(resolve, reject){
+    var settled = false;
+    var timer = setTimeout(function(){
+      if(settled) return;
+      settled = true;
+      fetchDictFallback(key).then(function(r){
+        WORD_CACHE[key] = r; persistWords();
+        syncSavedWord(key, r);
+        resolve(r);
+      }).catch(function(){ reject(new Error('AI 超时，词典也无结果')); });
+    }, 8000);
+    callAI(prompt, function(text){
+      if(settled) return;
+      var obj = extractJSON(text);
+      if(obj && obj.meaning){
+        settled = true; clearTimeout(timer);
+        var result = { ipa: obj.ipa || '', audio: '', pos: obj.pos || '', meaning: obj.meaning, source: 'AI 实时生成' };
+        WORD_CACHE[key] = result; persistWords();
+        syncSavedWord(key, result);
+        resolve(result);
+      } else {
+        if(settled) return;
+        settled = true; clearTimeout(timer);
+        fetchDictFallback(key).then(function(r){
+          WORD_CACHE[key] = r; persistWords();
+          syncSavedWord(key, r);
+          resolve(r);
+        }).catch(function(err){ reject(err); });
+      }
+    }, function(err){
+      if(settled) return;
+      settled = true; clearTimeout(timer);
+      fetchDictFallback(key).then(function(r){
+        WORD_CACHE[key] = r; persistWords();
+        syncSavedWord(key, r);
+        resolve(r);
+      }).catch(function(){ reject(err ? new Error(err) : new Error('查询失败')); });
+    }, { timeout: 10000, retries: 1 });
+  });
+}
+function syncSavedWord(key, data){
+  var article = currentArticle();
+  if(!article) return;
+  var changed = false;
+  for(var i = 0; i < article.savedWords.length; i++){
+    var sw = article.savedWords[i];
+    if(sw.w === key){
+      if((!sw.m || !String(sw.m).trim()) && data.meaning){ sw.m = data.meaning; changed = true; }
+      if(!sw.pos && data.pos){ sw.pos = data.pos; changed = true; }
+      if(!sw.ipa && data.ipa){ sw.ipa = data.ipa; changed = true; }
+    }
+  }
+  if(changed){
+    saveLibrary();
+    refreshFavBadge();
+    if(favModal.classList.contains('show')) renderFavList();
+  }
+}
+
+/* ============================================================
+   10. 收藏：统一入口（去重）
+   ============================================================ */
+function favSentenceToggle(text){
+  var article = currentArticle();
+  if(!article) return { ok: false, reason: 'no-article' };
+  var key = cacheKey(text);
+  if(!key) return { ok: false, reason: 'empty' };
+
+  var idx = -1;
+  for(var i = 0; i < article.savedSentences.length; i++){
+    if(cacheKey(article.savedSentences[i].text) === key){ idx = i; break; }
+  }
+  if(idx >= 0){
+    article.savedSentences.splice(idx, 1);
+    saveLibrary();
+    refreshFavBadge();
+    return { ok: true, action: 'removed' };
+  }
+  article.savedSentences.push({ text: text, at: Date.now() });
+  saveLibrary();
+  refreshFavBadge();
+  return { ok: true, action: 'added' };
+}
+
+function favWordToggle(raw, meaning, pos, ipa, type){
+  var article = currentArticle();
+  if(!article) return { ok: false, reason: 'no-article' };
+  var w = normalizeWord(raw);
+  if(!w) return { ok: false, reason: 'invalid' };
+
+  var idx = -1;
+  for(var i = 0; i < article.savedWords.length; i++){
+    if(article.savedWords[i].w === w){ idx = i; break; }
+  }
+  if(idx >= 0){
+    article.savedWords.splice(idx, 1);
+    saveLibrary();
+    refreshFavBadge();
+    return { ok: true, action: 'removed' };
+  }
+
+  article.savedWords.push({
+    w: w, raw: raw,
+    m: meaning || '', pos: pos || '', ipa: ipa || '',
+    type: type === 'phrase' ? 'phrase' : 'word',
+    at: Date.now()
+  });
+  saveLibrary();
+  refreshFavBadge();
+  return { ok: true, action: 'added' };
+}
+
+function isWordSaved(w){
+  var article = currentArticle();
+  if(!article) return false;
+  var nw = normalizeWord(w);
+  return article.savedWords.some(function(x){ return x.w === nw; });
+}
+function isSentenceSaved(text){
+  var article = currentArticle();
+  if(!article) return false;
+  var key = cacheKey(text);
+  return article.savedSentences.some(function(s){ return cacheKey(s.text) === key; });
+}
+
+/* ============================================================
+   11. 发音
+   ============================================================ */
+var currentAudio = null;
+function stopSpeak(){
+  if(currentAudio){ try { currentAudio.pause(); currentAudio.currentTime = 0; } catch(e){} currentAudio = null; }
+  if('speechSynthesis' in window){ try { window.speechSynthesis.cancel(); } catch(e){} }
+  var btns = document.querySelectorAll('.playing');
+  for(var i = 0; i < btns.length; i++) btns[i].classList.remove('playing');
+}
+function playAudioUrl(url, onFail, onEnd){
+  try{
+    var a = new Audio(url); a.preload = 'auto'; currentAudio = a;
+    a.addEventListener('ended', function(){ stopSpeak(); onEnd && onEnd(); });
+    a.addEventListener('error', function(){ currentAudio = null; onFail && onFail(); });
+    var p = a.play();
+    if(p && p.catch){ p.catch(function(){ currentAudio = null; onFail && onFail(); }); }
+  }catch(e){ onFail && onFail(); }
+}
+function browserSpeak(word, onEnd){
+  if(!('speechSynthesis' in window)){ onEnd && onEnd(); return; }
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  var u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = 0.9;
+  u.onend = function(){ onEnd && onEnd(); };
+  u.onerror = function(){ onEnd && onEnd(); };
+  window.speechSynthesis.speak(u);
+}
+function youdaoUrl(word){
+  return 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=2';
+}
+function speakWord(word, audioUrl, btn){
+  if(!word) return;
+  stopSpeak();
+  if(btn) btn.classList.add('playing');
+  var onFinalEnd = function(){ if(btn) btn.classList.remove('playing'); };
+  var tryYoudao = function(){ playAudioUrl(youdaoUrl(word), function(){ browserSpeak(word, onFinalEnd); }, onFinalEnd); };
+  if(audioUrl) playAudioUrl(audioUrl, tryYoudao, onFinalEnd);
+  else tryYoudao();
+}
+
+/* ============================================================
+   12. 渲染文章
+   ============================================================ */
+function renderText(){
+  docTitle.textContent = state.title;
+  articleBody.innerHTML = '';
+  var frag = document.createDocumentFragment();
+  state.paragraphs.forEach(function(sentences, pi){
+    var p = document.createElement('p');
+    p.className = 'para';
+    sentences.forEach(function(text, si){
+      var sent = document.createElement('span');
+      sent.className = 'sentence';
+      sent.dataset.sid = pi + ':' + si;
+      if(isOptionLine(text)) sent.classList.add('is-option');
+      String(text).split(/\s+/).filter(Boolean).forEach(function(w, i){
+        if(i > 0) sent.appendChild(document.createTextNode(' '));
+        var ws = document.createElement('span');
+        ws.className = 'w';
+        ws.textContent = w;
+        sent.appendChild(ws);
+      });
+      p.appendChild(sent);
+      if(si < sentences.length - 1) p.appendChild(document.createTextNode(' '));
+    });
+    frag.appendChild(p);
+  });
+  articleBody.appendChild(frag);
+  reader.scrollTop = 0;
+}
+function applyArticle(article){
+  if(!article) return;
+  state.title = article.title;
+  state.paragraphs = article.paragraphs;
+  article.lastRead = Date.now();
+  saveLibrary();
+  closeSheet();
+  hideToolbar();
+  hideWordPopup();
+  renderText();
+  refreshFavBadge();
+}
+
+/* ============================================================
+   13. 句子切分 & 文章解析
+   ============================================================ */
+function splitSentences(text){
+  var prot = String(text || '');
+  var ABBR = ['Mr','Mrs','Ms','Dr','Prof','St','Jr','Sr','vs','etc',
+              'e\\.g','i\\.e','U\\.S','U\\.K','a\\.m','p\\.m','No','Fig','Inc','Ltd','Co'];
+  ABBR.forEach(function(a){
+    var re = new RegExp('\\b' + a + '\\.', 'g');
+    prot = prot.replace(re, function(m){ return m.slice(0, -1) + '\u2024'; });
+  });
+  // 行首 A. B. C. D.（选项）不当句末
+  prot = prot.replace(/\b([A-D])\.(?=\s)/g, function(m, ch){ return ch + '\u2024'; });
+  var marked = prot.replace(/([.!?。！？…]+["'’”)）\]]?)\s*/g, '$1\u0001');
+  var out = [];
+  marked.split('\u0001').forEach(function(s){
+    s = s.replace(/\u2024/g, '.').replace(/[ \t]+/g, ' ').trim();
+    if(s) out.push(s);
+  });
+  return out;
+}
+function cleanMarkdown(t){
+  return t
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/`{1,3}/g, '');
+}
+
+/* ---- 导入文本预处理 ---- */
+var OPTION_RE = /^\s*(?:[\(（]?\s*[A-Da-d]\s*[\)）.．、]|①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|\d+\s*[.．、\)）])\s*/;
+
+function isOptionLine(line){
+  return OPTION_RE.test(String(line || ''));
+}
+function endsSentenceStrict(s){
+  return /[.!?。！？…]["'’”)）\]]?$/.test(String(s || '').trim());
+}
+function countSentences(s){
+  return splitSentences(s).length;
+}
+
+/* 无空行时，按每 4 句插空行分段 */
+function regroupBySentences(text){
+  var lines = text.split('\n');
+  var out = [], count = 0;
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i];
+    if(line === ''){
+      if(out.length && out[out.length - 1] !== '') out.push('');
+      count = 0;
+      continue;
+    }
+    out.push(line);
+    if(isOptionLine(line)) continue;
+    count += countSentences(line);
+    if(count >= 4 && i < lines.length - 1){
+      var nxt = lines[i + 1];
+      if(nxt && nxt !== '' && !isOptionLine(nxt)){
+        out.push('');
+        count = 0;
+      }
+    }
+  }
+  return out.join('\n');
+}
+
+/* 主入口：规范化导入文本 */
+function normalizeImportText(text){
+  var t = String(text || '').replace(/\r\n?/g, '\n')
+                            .replace(/[\u200B-\u200D\uFEFF]/g, '');
+  var hasBlank = /\n\s*\n/.test(t);
+  var lines = t.split('\n');
+  var out = [], buf = '';
+
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i].replace(/[ \t]+/g, ' ').replace(/\s+$/, '').trim();
+
+    if(!line){
+      if(buf){ out.push(buf); buf = ''; }
+      if(out.length && out[out.length - 1] !== '') out.push('');
+      continue;
+    }
+    if(isOptionLine(line)){
+      if(buf){ out.push(buf); buf = ''; }
+      out.push(line);
+      continue;
+    }
+    if(!buf){
+      buf = line;
+    } else if(endsSentenceStrict(buf)){
+      out.push(buf);
+      buf = line;
+    } else {
+      buf += ' ' + line;
+    }
+  }
+  if(buf) out.push(buf);
+
+  var joined = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if(!hasBlank) joined = regroupBySentences(joined);
+  return joined;
+}
+
+function parseArticle(rawText){
+  var t = String(rawText || '').replace(/\r\n?/g, '\n');
+  t = cleanMarkdown(t);
+  t = normalizeImportText(t);
+  var blocks = t.split(/\n\s*\n+/);
+  var result = [];
+  blocks.forEach(function(block){
+    var lines = block.split('\n').map(function(l){
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    var sents = [];
+    lines.forEach(function(line){
+      splitSentences(line).forEach(function(s){ sents.push(s); });
+    });
+    if(sents.length) result.push(sents);
+  });
+  return result;
+}
+
+/* ============================================================
+   14. 网页抓取
+   ============================================================ */
+function fetchArticleFromUrl(url){
+  var jina = 'https://r.jina.ai/' + url;
+  return fetch(jina, { headers: { 'Accept': 'text/plain' } })
+    .then(function(r){
+      if(!r.ok) throw new Error('Jina HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function(t){
+      if(!t || t.replace(/\s/g, '').length < 80) throw new Error('内容为空');
+      return t;
+    })
+    .catch(function(){
+      return fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url))
+        .then(function(r){
+          if(!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function(html){
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var rm = doc.querySelectorAll('script,style,nav,header,footer,aside,noscript,iframe,form,svg');
+          for(var i = 0; i < rm.length; i++) rm[i].remove();
+          var title = doc.title || '';
+          var body = doc.body ? (doc.body.innerText || doc.body.textContent || '') : '';
+          return (title ? title + '\n\n' : '') + body;
+        });
+    });
+}
+
+/* ============================================================
+   15. 浮动定位 & 手势
+   ============================================================ */
+/* rect: 水平居中参考；avoidRect: 必须避开的矩形（通常是整句） */
+function positionFloating(el, rect, avoidRect){
+  var dev = device.getBoundingClientRect();
+  var w = el.offsetWidth, h = el.offsetHeight;
+  var left = rect.left - dev.left + rect.width / 2;
+  left = Math.max(w / 2 + 8, Math.min(left, dev.width - w / 2 - 8));
+
+  var av = avoidRect || rect;
+  var avTop = av.top - dev.top;
+  var avBottom = av.bottom - dev.top;
+  var GAP = 12, EDGE = 10;
+
+  var spaceBelow = dev.height - avBottom - EDGE;
+  var spaceAbove = avTop - EDGE;
+  var top, flip;
+
+  if(spaceBelow >= h + GAP){
+    top = avBottom + GAP;
+    flip = true;
+  } else if(spaceAbove >= h + GAP){
+    top = avTop - h - GAP;
+    flip = false;
+  } else if(spaceBelow >= spaceAbove){
+    top = dev.height - h - EDGE;
+    if(top < avBottom + GAP) top = avBottom + GAP;
+    flip = true;
+  } else {
+    top = Math.max(EDGE, avTop - h - GAP);
+    flip = false;
+  }
+
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+  el.classList.toggle('flip', flip);
+}
+function repositionToolbar(){
+  if(currentToolbarRect && toolbar.classList.contains('show')){
+    positionFloating(toolbar, currentToolbarRect.anchor, currentToolbarRect.avoid);
+  }
+}
+
+var LONG_PRESS_MS = 420, MOVE_TOL = 10;
+var press = null, lastTouchTs = 0;
+function getPoint(e){
+  if(e.touches && e.touches.length) return { x:e.touches[0].clientX, y:e.touches[0].clientY };
+  if(e.changedTouches && e.changedTouches.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
+  return { x:e.clientX || 0, y:e.clientY || 0 };
+}
+function dist(a, b){ return Math.sqrt((a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y)); }
+function clearPress(){ if(press && press.timer) clearTimeout(press.timer); press = null; }
+function onDown(e, p){
+  clearPress();
+  var t = e.target;
+  var sentence = t && t.closest ? t.closest('.sentence') : null;
+  if(!sentence) return;
+  if(e.button !== undefined && e.button !== 0) return;
+  var anchor = (t.closest && t.closest('.w')) || sentence;
+  press = {
+    start: p, sentence: sentence, anchor: anchor, fired: false,
+    timer: setTimeout(function(){
+      if(!press) return;
+      press.fired = true;
+      selectSentence(press.sentence, press.anchor);
+    }, LONG_PRESS_MS)
+  };
+}
+function onMove(p){ if(!press || press.fired) return; if(dist(p, press.start) > MOVE_TOL) clearPress(); }
+function onUp(e, p){
+  if(!press) return;
+  var cur = press;
+  if(cur.timer) clearTimeout(cur.timer);
+  press = null;
+  if(cur.fired) return;
+  if(dist(p, cur.start) > MOVE_TOL) return;
+  handleTap(cur.anchor);
+}
+reader.addEventListener('touchstart', function(e){ lastTouchTs = Date.now(); onDown(e, getPoint(e)); }, {passive:true});
+reader.addEventListener('touchmove', function(e){ onMove(getPoint(e)); }, {passive:true});
+reader.addEventListener('touchend', function(e){ onUp(e, getPoint(e)); });
+reader.addEventListener('touchcancel', function(){ clearPress(); });
+reader.addEventListener('mousedown', function(e){ if(Date.now() - lastTouchTs < 700) return; onDown(e, getPoint(e)); });
+reader.addEventListener('mousemove', function(e){ if(Date.now() - lastTouchTs < 700) return; onMove(getPoint(e)); });
+reader.addEventListener('mouseup', function(e){ if(Date.now() - lastTouchTs < 700) return; onUp(e, getPoint(e)); });
+reader.addEventListener('mouseleave', function(){ clearPress(); });
+reader.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+/* ============================================================
+   16. 长按 → 吸附整句 + 工具栏译文
+   ============================================================ */
+var tbFavBtn = toolbar.querySelector('.tb-btn.fav');
+function selectSentence(sentenceEl, anchorEl){
+  var marked = reader.querySelectorAll('.sentence.is-marked');
+  for(var i = 0; i < marked.length; i++) marked[i].classList.remove('is-marked');
+  sentenceEl.classList.add('is-marked');
+  currentSentenceText = sentenceEl.textContent.replace(/\s+/g, ' ').trim();
+  hideWordPopup();
+
+  var saved = isSentenceSaved(currentSentenceText);
+  tbFavBtn.classList.toggle('is-on', saved);
+  tbFavBtn.querySelector('.lbl').textContent = saved ? '已收藏' : '收藏';
+
+  currentToolbarRect = {
+    anchor: (anchorEl || sentenceEl).getBoundingClientRect(),
+    avoid: sentenceEl.getBoundingClientRect()
+  };
+  positionFloating(toolbar, currentToolbarRect.anchor, currentToolbarRect.avoid);
+  toolbar.classList.add('show');
+
+  showSentenceTranslation(currentSentenceText);
+  if(navigator.vibrate){ try { navigator.vibrate(10); } catch(err){} }
+}
+function hideToolbar(){
+  toolbar.classList.remove('show');
+  tbTrans.classList.remove('show','loading','err');
+  tbTrans.textContent = '';
+}
+function showSentenceTranslation(text){
+  var key = cacheKey(text);
+  var article = currentArticle();
+  if(article && article.explain[key] && article.explain[key].d){
+    var t = article.explain[key].d.translation || '';
+    if(t){
+      tbTrans.textContent = t;
+      tbTrans.classList.add('show');
+      tbTrans.classList.remove('loading','err');
+      repositionToolbar();
+      return;
+    }
+  }
+  tbTrans.textContent = '正在翻译…';
+  tbTrans.classList.add('show','loading');
+  tbTrans.classList.remove('err');
+  repositionToolbar();
+
+  translateText(text).then(function(res){
+    if(currentSentenceText !== text) return;
+    if(res){
+      tbTrans.textContent = res;
+      tbTrans.classList.remove('loading','err');
+    } else {
+      tbTrans.textContent = '（暂无译文）';
+      tbTrans.classList.remove('loading');
+      tbTrans.classList.add('err');
+    }
+    repositionToolbar();
+  }).catch(function(){
+    if(currentSentenceText !== text) return;
+    tbTrans.textContent = '（翻译暂不可用）';
+    tbTrans.classList.remove('loading');
+    tbTrans.classList.add('err');
+    repositionToolbar();
+  });
+}
+
+/* ============================================================
+   17. 短按 → 查词
+   ============================================================ */
+function handleTap(anchorEl){
+  var wEl = anchorEl && anchorEl.closest ? anchorEl.closest('.w') : null;
+  if(!wEl){ hideWordPopup(); return; }
+  var raw = wEl.textContent || '';
+  var m = raw.match(/[A-Za-z][A-Za-z'’-]*/);
+  if(!m){ hideWordPopup(); return; }
+  hideToolbar();
+  showWordPopup(m[0], wEl.getBoundingClientRect());
+}
+function showWordPopup(word, rect){
+  var clean = word.trim();
+  wpWord.textContent = clean;
+  wpPos.textContent = '';
+  wpIpa.textContent = '';
+  wpMeaning.textContent = '查询中…';
+  wpSource.textContent = '';
+  wpSpeak.dataset.word = clean;
+  wpSpeak.dataset.audio = '';
+  wpFav.dataset.word = clean;
+  wpFav.dataset.pos = '';
+  wpFav.dataset.ipa = '';
+  wpFav.dataset.meaning = '';
+  wpFav.classList.toggle('is-on', isWordSaved(clean));
+
+  positionFloating(wordPopup, rect);
+  wordPopup.classList.add('show');
+
+  var reposition = function(){ try { positionFloating(wordPopup, rect); } catch(e){} };
+
+  lookupWord(clean).then(function(data){
+    wpPos.textContent = data.pos ? ' · ' + data.pos : '';
+    wpIpa.textContent = data.ipa || '';
+    wpMeaning.textContent = data.meaning || '暂无释义';
+    wpSource.textContent = data.source || 'AI';
+    wpSpeak.dataset.audio = data.audio || '';
+    wpFav.dataset.pos = data.pos || '';
+    wpFav.dataset.ipa = data.ipa || '';
+    wpFav.dataset.meaning = data.meaning || '';
+    wpFav.classList.toggle('is-on', isWordSaved(clean));
+    reposition();
+  }).catch(function(err){
+    wpMeaning.textContent = '查询失败：' + (err.message || '未知错误');
+    wpSource.textContent = getCfg() ? '请稍后重试' : '请点击顶部横幅配置 AI';
+    reposition();
+  });
+}
+function hideWordPopup(){ wordPopup.classList.remove('show'); stopSpeak(); }
+
+wpSpeak.addEventListener('click', function(e){
+  e.stopPropagation();
+  var w = wpSpeak.dataset.word, a = wpSpeak.dataset.audio;
+  if(!w) return;
+  if(wpSpeak.classList.contains('playing')) stopSpeak();
+  else speakWord(w, a, wpSpeak);
+});
+wpFav.addEventListener('click', function(e){
+  e.stopPropagation();
+  var raw = wpFav.dataset.word;
+  var meaning = wpFav.dataset.meaning;
+  var pos = wpFav.dataset.pos;
+  var ipa = wpFav.dataset.ipa;
+
+  var res = favWordToggle(raw, meaning, pos, ipa);
+  if(!res.ok) return;
+
+  wpFav.classList.toggle('is-on', res.action === 'added');
+  toast(res.action === 'added' ? '已收藏到词汇本' : '已取消收藏');
+
+  if(res.action === 'added' && !meaning){
+    lookupWord(normalizeWord(raw)).catch(function(){});
+  }
+});
+
+/* ============================================================
+   18. 工具条
+   ============================================================ */
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast('已复制到剪贴板'); })
+      .catch(function(){ legacyCopy(text); });
+  } else { legacyCopy(text); }
+}
+function legacyCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.top = '-9999px'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); toast('已复制到剪贴板'); } catch(e){}
+  document.body.removeChild(ta);
+}
+function flashLabel(btn, text){
+  var lbl = btn.querySelector('.lbl');
+  if(!lbl) return;
+  var o = lbl.textContent;
+  lbl.textContent = text;
+  setTimeout(function(){ lbl.textContent = o; }, 900);
+}
+toolbar.addEventListener('click', function(e){
+  var btn = e.target.closest ? e.target.closest('.tb-btn') : null;
+  if(!btn) return;
+  var action = btn.getAttribute('data-action');
+  if(action === 'copy'){
+    copyText(currentSentenceText);
+    flashLabel(btn, '已复制');
+  } else if(action === 'fav'){
+    var res = favSentenceToggle(currentSentenceText);
+    if(!res.ok) return;
+    tbFavBtn.classList.toggle('is-on', res.action === 'added');
+    tbFavBtn.querySelector('.lbl').textContent = res.action === 'added' ? '已收藏' : '收藏';
+    toast(res.action === 'added' ? '已收藏句子' : '已取消收藏');
+  } else if(action === 'explain'){
+    openExplain(currentSentenceText);
+  }
+});
+document.addEventListener('pointerdown', function(e){
+  var t = e.target;
+  if(toolbar.contains(t) || wordPopup.contains(t) || cfgModal.contains(t) ||
+     impModal.contains(t) || libModal.contains(t) || favModal.contains(t) ||
+     aiProgressEl.contains(t)) return;
+  if(t.closest && t.closest('.sentence')) return;
+  hideToolbar();
+  hideWordPopup();
+}, true);
+
+/* ============================================================
+   19. AI 讲解
+   ============================================================ */
+$('closeSheet').addEventListener('click', closeSheet);
+scrim.addEventListener('click', closeSheet);
+function openSheet(){ scrim.classList.add('show'); sheet.classList.add('show'); }
+function closeSheet(){ scrim.classList.remove('show'); sheet.classList.remove('show'); }
+
+function openExplain(text){
+  currentExplainText = text;
+  hideToolbar();
+  var key = cacheKey(text);
+  if(!key) return;
+
+  var article = currentArticle();
+  if(!article){ toast('没有可用的文章'); return; }
+
+  if(article.explain[key] && article.explain[key].d){
+    renderExplain(article.explain[key].d);
+    openSheet();
+    return;
+  }
+
+  if(!getCfg()){ openCfg(); return; }
+
+  renderLoading();
+  openSheet();
+  requestExplain(text, key);
+}
+
+function requestExplain(text, key){
+  var article = currentArticle();
+  if(!article) return;
+
+  var prompt = [
+    { role: 'system', content:
+      '你是一个专业的英语语法讲解助手。用户会给你一个英语句子。请返回严格的 JSON，不要任何多余文字，格式如下：\n' +
+      '{\n  "translation": "整句中文翻译",\n  "vocab": [{"w":"重点单词","m":"中文释义"}],\n' +
+      '  "structure": [\n    {"text":"句子片段原文","tag":"标签","role":"语法作用","desc":"详细解释"}\n  ]\n}\n\n' +
+      'tag 只能从以下列表中选一个：\n' +
+      'main（主干）, subj_clause（主语从句）, obj_clause（宾语从句）, pred_clause（表语从句）, ' +
+      'attr_clause（定语从句）, adv_clause（状语从句）, prep_phrase（介词短语）, ' +
+      'inf_phrase（不定式短语）, ppl_phrase（分词短语）, appositive（同位语）, parenthetical（插入语）\n\n' +
+      '要求：\n1. structure 数组必须按原句顺序排列，拼起来能还原原句。\n2. 只拆出有语法意义的片段。\n3. desc 用中文解释清楚。\n4. vocab 挑 2-4 个值得学习的词。' },
+    { role: 'user', content: text }
+  ];
+
+  callAI(prompt, function(resp){
+    var raw = extractJSON(resp);
+    var data = validateExplain(raw);
+    if(!data){
+      sheetBody.innerHTML =
+        '<div class="loading">AI 返回格式异常，请重试' +
+        '<button class="retry-btn" id="explainRetry">重试</button>' +
+        '<span style="font-size:11px;color:#9A9384;margin-top:8px;">' +
+        esc(String(resp || '').slice(0, 200)) + '</span></div>';
+      var rb = $('explainRetry');
+      if(rb) rb.addEventListener('click', function(){
+        renderLoading();
+        requestExplain(text, key);
+      });
+      return;
+    }
+    var a = currentArticle();
+    if(!a) return;
+    a.explain[key] = { t: Date.now(), d: data };
+    saveLibrary();
+    renderExplain(data);
+  }, function(err){
+    sheetBody.innerHTML =
+      '<div class="loading">生成失败：' + esc(err) +
+      '<button class="retry-btn" id="explainRetry">重试</button></div>';
+    var rb = $('explainRetry');
+    if(rb) rb.addEventListener('click', function(){
+      renderLoading();
+      requestExplain(text, key);
+    });
+  });
+}
+
+/* 对某个长片段按需二级拆解 */
+function requestSubAnalysis(sentenceText, chunkIdx, onDone){
+  var article = currentArticle();
+  if(!article) return;
+  var key = cacheKey(sentenceText);
+  var ex = article.explain[key];
+  if(!ex || !ex.d || !Array.isArray(ex.d.structure)) return;
+  var chunk = ex.d.structure[chunkIdx];
+  if(!chunk) return;
+
+  if(chunk.sub && chunk.sub.length){ onDone && onDone(chunk.sub); return; }
+
+  var cfg = getCfg();
+  if(!cfg){ onDone && onDone(null, '请先配置 AI 接口'); return; }
+
+  var prompt = [
+    { role: 'system', content:
+      '你是一个专业的英语语法讲解助手。用户会给你一个英语句子片段（可能是一个长从句、短语或插入语）。\n' +
+      '请把它进一步拆解成更小的语法成分，返回严格的 JSON，不要任何多余文字：\n' +
+      '{"sub":[{"text":"子片段原文","tag":"标签","role":"语法作用","desc":"中文解释"}]}\n\n' +
+      'tag 只能取以下之一：main, subj_clause, obj_clause, pred_clause, attr_clause, adv_clause, ' +
+      'prep_phrase, inf_phrase, ppl_phrase, appositive, parenthetical。\n\n' +
+      '要求：\n1. sub 数组按原顺序排列，拼起来能还原原片段。\n' +
+      '2. 只拆出有语法意义的成分，不要逐词拆。\n' +
+      '3. desc 用中文，简洁（20 字以内）。\n' +
+      '4. 只输出 JSON，不要 markdown 代码块。' },
+    { role: 'user', content: chunk.text }
+  ];
+
+  callAI(prompt, function(resp){
+    var obj = extractJSON(resp);
+    var subs = (obj && Array.isArray(obj.sub)) ? obj.sub : [];
+    var clean = [];
+    for(var i = 0; i < subs.length; i++){
+      var s = subs[i];
+      if(!s) continue;
+      var tx = String(s.text || '').trim();
+      if(!tx) continue;
+      var tag = String(s.tag || 'main');
+      if(VALID_TAGS.indexOf(tag) === -1) tag = 'main';
+      clean.push({
+        text: tx, tag: tag,
+        role: String(s.role || '').trim(),
+        desc: String(s.desc || '').trim()
+      });
+    }
+    if(!clean.length){ onDone && onDone(null, 'AI 未能拆解'); return; }
+    chunk.sub = clean;
+    ex.t = Date.now();
+    saveLibrary();
+    onDone && onDone(clean);
+  }, function(err){
+    onDone && onDone(null, (err && err.message) || '拆解失败');
+  }, { timeout: 20000, retries: 1 });
+}
+
+function renderSubList(subs){
+  var html = '<div class="sub-list">';
+  for(var i = 0; i < subs.length; i++){
+    var s = subs[i];
+    var m = tagMeta(s.tag);
+    html += '<div class="sub-item group-' + m.group + '">' +
+      '<div class="sub-head">' +
+        '<span class="sub-tag group-' + m.group + '">' + m.label + '</span>' +
+        (s.role ? '<span class="sub-role">' + esc(s.role) + '</span>' : '') +
+      '</div>' +
+      '<div class="sub-text">' + esc(s.text) + '</div>' +
+      '<div class="sub-desc">' + esc(s.desc) + '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderLoading(){
+  sheetBody.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在生成讲解…</div>';
+}
+
+function renderExplain(data){
+  var vocab = data.vocab || [];
+  var structure = data.structure || [];
+
+  var vocabHtml = vocab.map(function(v){
+    var isFav = isWordSaved(v.w);
+    var isPhrase = v.type === 'phrase';
+    return '<div class="vocab-item' + (isPhrase ? ' is-phrase' : '') + '">' +
+      '<span class="w">' + esc(v.w) + '</span>' +
+      (isPhrase ? '<span class="vocab-tag">搭配</span>' : '') +
+      '<span class="m">' + esc(v.m) + '</span>' +
+      '<button class="spk" data-word="' + esc(v.w) + '" title="发音">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
+          '<path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/>' +
+        '</svg></button>' +
+      '<button class="v-fav' + (isFav ? ' is-on' : '') + '" ' +
+        'data-vfav-word="' + esc(v.w) + '" data-vfav-meaning="' + esc(v.m) + '" ' +
+        'data-vfav-type="' + (isPhrase ? 'phrase' : 'word') + '" title="收藏到词汇本">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>' +
+        '</svg></button>' +
+      '</div>';
+  }).join('');
+
+  var chunksHtml = structure.map(function(c, i){
+    var meta = tagMeta(c.tag);
+    return '<span class="chunk group-' + meta.group + '" data-idx="' + i + '">' + esc(c.text) + '</span>';
+  }).join(' ');
+
+  sheetBody.innerHTML =
+    '<div class="sentence-card">' + (chunksHtml || esc(data.translation || '')) + '</div>' +
+    '<button class="translate-toggle" id="tToggle">查看译文' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>' +
+    '</button>' +
+    '<div class="translation-text" id="tText">' + esc(data.translation || '') + '</div>' +
+    '<div class="tabs">' +
+      '<div class="tab active" data-pane="structure">句子结构</div>' +
+      '<div class="tab" data-pane="vocab">重点词汇 (' + vocab.length + ')</div>' +
+    '</div>' +
+    '<div class="pane active" id="pane-structure">' +
+      '<div class="legend">' +
+        '<span class="legend-item group-main"><span class="sw"></span>主干</span>' +
+        '<span class="legend-item group-clause"><span class="sw"></span>从句</span>' +
+        '<span class="legend-item group-phrase"><span class="sw"></span>短语</span>' +
+        '<span class="legend-item group-insert"><span class="sw"></span>插入 / 同位语</span>' +
+      '</div>' +
+      '<div class="hint-tip">点句子里的色块，看它是什么成分</div>' +
+      '<div id="explainSlot"></div>' +
+    '</div>' +
+    '<div class="pane" id="pane-vocab">' + vocabHtml + '</div>';
+
+  var spkBtns = sheetBody.querySelectorAll('.vocab-item .spk');
+  for(var si = 0; si < spkBtns.length; si++){
+    (function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var w = this.getAttribute('data-word');
+        if(this.classList.contains('playing')) stopSpeak();
+        else speakWord(w, '', this);
+      });
+    })(spkBtns[si]);
+  }
+
+  var vFavBtns = sheetBody.querySelectorAll('.vocab-item .v-fav');
+  for(var vi = 0; vi < vFavBtns.length; vi++){
+    (function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var raw = this.getAttribute('data-vfav-word');
+        var mean = this.getAttribute('data-vfav-meaning') || '';
+        var tp = this.getAttribute('data-vfav-type') || 'word';
+        var res = favWordToggle(raw, mean, '', '', tp);
+        if(!res.ok) return;
+        this.classList.toggle('is-on', res.action === 'added');
+        toast(res.action === 'added' ? '已收藏到词汇本' : '已取消收藏');
+      });
+    })(vFavBtns[vi]);
+  }
+
+  var tToggle = $('tToggle');
+  var tText = $('tText');
+  tToggle.addEventListener('click', function(){
+    tToggle.classList.toggle('open');
+    tText.classList.toggle('open');
+    tToggle.childNodes[0].nodeValue = tText.classList.contains('open') ? '收起译文' : '查看译文';
+  });
+
+  var tabs = sheetBody.querySelectorAll('.tab');
+  for(var i = 0; i < tabs.length; i++){
+    (function(tab){
+      tab.addEventListener('click', function(){
+        var allTabs = sheetBody.querySelectorAll('.tab');
+        var allPanes = sheetBody.querySelectorAll('.pane');
+        for(var j = 0; j < allTabs.length; j++) allTabs[j].classList.remove('active');
+        for(var k = 0; k < allPanes.length; k++) allPanes[k].classList.remove('active');
+        this.classList.add('active');
+        $('pane-' + this.getAttribute('data-pane')).classList.add('active');
+      });
+    })(tabs[i]);
+  }
+
+  var slot = $('explainSlot');
+  function showChunkExplain(idx){
+    var c = structure[idx];
+    if(!c) return;
+    var meta = tagMeta(c.tag);
+    var chunks = sheetBody.querySelectorAll('.chunk');
+    for(var i = 0; i < chunks.length; i++) chunks[i].classList.remove('is-active');
+    var tgt = sheetBody.querySelector('.chunk[data-idx="' + idx + '"]');
+    if(tgt) tgt.classList.add('is-active');
+
+    var subHtml = '';
+    var wordCount = String(c.text || '').split(/\s+/).filter(Boolean).length;
+    var isLong = wordCount >= SUB_MIN_WORDS || String(c.text || '').length >= SUB_MIN_CHARS;
+    var canSub = isLong && c.tag !== 'main';
+
+    if(c.sub && c.sub.length){
+      subHtml = renderSubList(c.sub);
+    } else if(canSub){
+      subHtml = '<button class="sub-btn" data-sub-idx="' + idx + '">深入拆解这段结构 →</button>';
+    }
+
+    slot.innerHTML =
+      '<div class="explain-card">' +
+        '<span class="tagline group-' + meta.group + '">' + meta.label +
+          (c.role ? ' · ' + esc(c.role) : '') + '</span>' +
+        '<div class="chunk-text">' + esc(c.text) + '</div>' +
+        '<p class="desc">' + esc(c.desc) + '</p>' +
+        subHtml +
+      '</div>';
+
+    var subBtn = slot.querySelector('.sub-btn');
+    if(subBtn){
+      subBtn.addEventListener('click', function(){
+        var i = parseInt(this.getAttribute('data-sub-idx'), 10);
+        var self = this;
+        self.disabled = true;
+        self.textContent = 'AI 拆解中…';
+        requestSubAnalysis(currentExplainText, i, function(subs, err){
+          if(err || !subs){
+            self.disabled = false;
+            self.textContent = '拆解失败：' + (err || '未知错误') + '，点击重试';
+            return;
+          }
+          var wrap = self.parentNode;
+          var div = document.createElement('div');
+          div.innerHTML = renderSubList(subs);
+          wrap.replaceChild(div.firstChild, self);
+        });
+      });
+    }
+  }
+  var chunks = sheetBody.querySelectorAll('.chunk');
+  for(var ci = 0; ci < chunks.length; ci++){
+    (function(ch){
+      ch.addEventListener('click', function(){
+        showChunkExplain(parseInt(this.getAttribute('data-idx'), 10));
+      });
+    })(chunks[ci]);
+  }
+  if(structure.length) showChunkExplain(0);
+}
+
+/* ============================================================
+   19b. 全文预解析（导入后自动调用 AI 分析整篇并缓存）
+   ============================================================ */
+var preJobs = {};
+var currentPreJob = null;
+
+function showAiProgress(done, total){
+  aiProgressText.textContent = 'AI 解析全文 ' + done + '/' + total;
+  aiProgressEl.classList.add('show');
+}
+function hideAiProgress(){
+  aiProgressEl.classList.remove('show');
+}
+aiProgressStop.addEventListener('click', function(){
+  if(currentPreJob) currentPreJob.cancelled = true;
+});
+
+function sentenceList(article, onlyMissing){
+  var out = [], seen = {};
+  article.paragraphs.forEach(function(p){
+    p.forEach(function(t){
+      var key = cacheKey(t);
+      if(!key || seen[key]) return;
+      seen[key] = 1;
+      if(onlyMissing){
+        var ex = article.explain[key];
+        if(ex && ex.d && ex.d.translation) return;
+      }
+      out.push({ key: key, text: t });
+    });
+  });
+  return out;
+}
+
+function analyzeBatch(article, batch){
+  var lines = batch.map(function(s, i){ return (i + 1) + '. ' + s.text; }).join('\n');
+
+  var prompt = [
+    { role: 'system', content:
+      '你是一个专业的英语语法讲解助手。用户会给你 N 个英语句子（按编号排列）。' +
+      '请返回严格的 JSON，不要任何多余文字，格式如下：\n' +
+      '{"items":[{"translation":"整句中文翻译",' +
+      '"vocab":[{"w":"单词或固定搭配","m":"中文释义","type":"word 或 phrase"}],' +
+      '"structure":[{"text":"片段原文","tag":"标签","role":"语法作用","desc":"中文解释"}]}]}\n\n' +
+      'tag 只能取以下之一：main, subj_clause, obj_clause, pred_clause, attr_clause, adv_clause, ' +
+      'prep_phrase, inf_phrase, ppl_phrase, appositive, parenthetical。\n\n' +
+      '要求：\n' +
+      '1. items 的长度必须等于输入句子数量，顺序一一对应，不能省略任何一句。\n' +
+      '2. structure 按原句顺序排列，拼起来能还原原句。\n' +
+      '3. desc 用中文，简洁（20 字以内）。\n' +
+      '4. vocab 每句挑 2-3 个值得学习的词或搭配；优先包含 1-2 个固定搭配（type="phrase"），没有搭配就只给单词（type="word"）。\n' +
+      '5. 只输出 JSON，不要 markdown 代码块。' },
+    { role: 'user', content: lines }
+  ];
+
+  return new Promise(function(resolve, reject){
+    callAI(prompt, function(text){
+      var obj = extractJSON(text);
+      var items = null;
+      if(Array.isArray(obj)) items = obj;
+      else if(obj && Array.isArray(obj.items)) items = obj.items;
+      else if(obj && Array.isArray(obj.results)) items = obj.results;
+      else if(obj && Array.isArray(obj.data)) items = obj.data;
+
+      if(!items || !items.length){ reject(new Error('AI 返回格式异常')); return; }
+
+      var stored = 0;
+      for(var i = 0; i < batch.length; i++){
+        var raw = items[i];
+        if(!raw) continue;
+
+        var d = {
+          translation: String(raw.translation || raw.t || '').trim(),
+          vocab: [],
+          structure: []
+        };
+        if(Array.isArray(raw.vocab)){
+          for(var vi = 0; vi < raw.vocab.length && d.vocab.length < 8; vi++){
+            var v = raw.vocab[vi];
+            if(!v || !v.w || !v.m) continue;
+            var tp = String(v.type || 'word').toLowerCase();
+            if(tp !== 'phrase') tp = 'word';
+            d.vocab.push({ w: String(v.w).trim(), m: String(v.m).trim(), type: tp });
+          }
+        }
+        if(Array.isArray(raw.structure)){
+          for(var ci = 0; ci < raw.structure.length; ci++){
+            var c = raw.structure[ci];
+            if(!c) continue;
+            var tx = String(c.text || '').trim();
+            if(!tx) continue;
+            var tag = String(c.tag || 'main');
+            if(VALID_TAGS.indexOf(tag) === -1) tag = 'main';
+            d.structure.push({
+              text: tx, tag: tag,
+              role: String(c.role || '').trim(),
+              desc: String(c.desc || '').trim(),
+              sub: []
+            });
+          }
+        }
+        if(!d.translation && !d.structure.length) continue;
+
+        article.explain[batch[i].key] = { t: Date.now(), d: d };
+        stored++;
+      }
+      if(!stored) reject(new Error('未解析出有效内容'));
+      else resolve(stored);
+    }, function(err){
+      reject(err);
+    }, { timeout: PRE_TIMEOUT_MS, retries: 1, maxTokens: PRE_MAX_TOKENS });
+  });
+}
+
+function preAnalyzeArticle(article, opts){
+  opts = opts || {};
+  if(!article) return;
+  if(preJobs[article.id]) return;
+  if(!getCfg()){
+    if(!opts.silent) toast('未配置 AI，已跳过全文解析');
+    return;
+  }
+
+  var pending = sentenceList(article, true);
+  if(!pending.length){
+    if(opts.toastDone) toast('全文已解析过，无需重复调用');
+    return;
+  }
+  if(pending.length > PRE_MAX_SENTENCES){
+    pending = pending.slice(0, PRE_MAX_SENTENCES);
+  }
+
+  var job = {
+    cancelled: false,
+    done: 0,
+    total: pending.length,
+    articleId: article.id
+  };
+  preJobs[article.id] = job;
+  currentPreJob = job;
+  showAiProgress(0, pending.length);
+
+  var cursor = 0;
+
+  function finish(err){
+    delete preJobs[article.id];
+    if(currentPreJob === job) currentPreJob = null;
+    hideAiProgress();
+    if(job.cancelled){ toast('已停止全文解析'); return; }
+    if(err){
+      toast('全文解析中断：' + (err.message || err));
+      return;
+    }
+    toast('全文解析完成 ✓ 长按句子即可秒读句意');
+  }
+
+  function step(){
+    if(job.cancelled || cursor >= pending.length){ finish(null); return; }
+    var batch = pending.slice(cursor, cursor + PRE_BATCH);
+    cursor += batch.length;
+
+    analyzeBatch(article, batch).then(function(){
+      job.done = Math.min(job.total, job.done + batch.length);
+      showAiProgress(job.done, job.total);
+      saveLibrary();
+      setTimeout(step, PRE_BATCH_DELAY);
+    }, function(err){
+      finish(err);
+    });
+  }
+
+  setTimeout(step, 200);
+}
+
+/* ============================================================
+   20. 我的文章 + 导入导出备份
+   ============================================================ */
+$('libBtn').addEventListener('click', function(){
+  renderLibList();
+  libModal.classList.add('show');
+});
+libClose.addEventListener('click', function(){ libModal.classList.remove('show'); });
+libModal.addEventListener('click', function(e){
+  if(e.target === libModal) libModal.classList.remove('show');
+});
+
+function renderLibList(){
+  var articles = library.articles.slice().sort(function(a, b){
+    return (b.lastRead || b.createdAt || 0) - (a.lastRead || a.createdAt || 0);
+  });
+  if(!articles.length){
+    libList.innerHTML = '<div class="lib-empty">还没有文章，点右上角「导入」吧</div>';
+    return;
+  }
+  var html = '';
+  articles.forEach(function(a){
+    var active = a.id === library.currentId;
+    var sentCount = a.paragraphs.reduce(function(n, p){ return n + p.length; }, 0);
+    html += '<div class="lib-item' + (active ? ' active' : '') + '" data-id="' + a.id + '">' +
+      '<div class="lib-main">' +
+        '<div class="lib-title">' + esc(a.title) + '</div>' +
+        '<div class="lib-meta">' + sentCount + ' 句 · ' + a.paragraphs.length + ' 段</div>' +
+      '</div>' +
+      '<button class="lib-del" data-del="' + a.id + '" title="删除">✕</button>' +
+    '</div>';
+  });
+  libList.innerHTML = html;
+}
+libList.addEventListener('click', function(e){
+  var del = e.target.closest ? e.target.closest('.lib-del') : null;
+  if(del){ e.stopPropagation(); deleteArticle(del.getAttribute('data-del')); return; }
+  var item = e.target.closest ? e.target.closest('.lib-item') : null;
+  if(!item) return;
+  var id = item.getAttribute('data-id');
+  if(id === library.currentId){ libModal.classList.remove('show'); return; }
+  library.currentId = id;
+  saveLibraryNow();
+  applyArticle(currentArticle());
+  libModal.classList.remove('show');
+  toast('已切换文章');
+});
+function deleteArticle(id){
+  var a = findArticle(id);
+  if(!a) return;
+  if(!confirm('删除《' + (a.title || '未命名') + '》及其解析、收藏记录？')) return;
+  if(preJobs[id]) preJobs[id].cancelled = true;
+  library.articles = library.articles.filter(function(x){ return x.id !== id; });
+  if(library.currentId === id){
+    library.currentId = library.articles.length ? library.articles[0].id : null;
+  }
+  if(!library.articles.length) createArticle(DEFAULT_TITLE, DEFAULT_PARAGRAPHS.map(function(p){ return p.slice(); }));
+  saveLibraryNow();
+  applyArticle(currentArticle());
+  renderLibList();
+  toast('已删除');
+}
+
+/* ---- 导出 ---- */
+$('expBtn').addEventListener('click', function(){
+  var payload = {
+    app: 'reader-ai',
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    library: library,
+    wordCache: WORD_CACHE
+  };
+  var blob;
+  try{
+    blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  }catch(e){ toast('导出失败'); return; }
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  var stamp = d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) +
+              '-' + ('0'+d.getHours()).slice(-2) + ('0'+d.getMinutes()).slice(-2);
+  a.href = url;
+  a.download = 'reader-backup-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  toast('已导出备份文件');
+});
+
+/* ---- 导入 ---- */
+$('impBackupBtn').addEventListener('click', function(){ $('impBackupFile').click(); });
+$('impBackupFile').addEventListener('change', function(){
+  var f = this.files && this.files[0];
+  this.value = '';
+  if(f) importBackupFile(f);
+});
+
+function importBackupFile(file){
+  var fr = new FileReader();
+  fr.onload = function(){
+    var payload;
+    try{
+      payload = JSON.parse(String(fr.result || ''));
+    }catch(e){
+      alert('文件解析失败：不是有效的 JSON');
+      return;
+    }
+    if(!payload || !payload.library || !Array.isArray(payload.library.articles)){
+      alert('文件格式不对。请选择本应用导出的备份文件。');
+      return;
+    }
+    var merge = confirm(
+      '选择导入方式：\n\n' +
+      '【确定】合并 —— 保留现有数据，把备份里多出来的部分合进来\n' +
+      '【取消】覆盖 —— 清空现有数据，完全采用备份内容'
+    );
+
+    if(merge){
+      mergeLibraries(library, payload.library);
+      if(payload.wordCache && typeof payload.wordCache === 'object'){
+        Object.keys(payload.wordCache).forEach(function(k){
+          if(!WORD_CACHE[k]) WORD_CACHE[k] = payload.wordCache[k];
+        });
+        persistWords();
+      }
+      if(!currentArticle() && library.articles.length) library.currentId = library.articles[0].id;
+      saveLibraryNow();
+      applyArticle(currentArticle());
+      renderLibList();
+      toast('已合并，共 ' + library.articles.length + ' 篇文章');
+    } else {
+      var imported = payload.library;
+      imported.articles = imported.articles.map(normalizeArticle);
+      if(!imported.currentId && imported.articles.length) imported.currentId = imported.articles[0].id;
+      library = imported;
+      if(payload.wordCache && typeof payload.wordCache === 'object'){
+        WORD_CACHE = payload.wordCache;
+        persistWords();
+      }
+      if(!library.articles.length){
+        createArticle(DEFAULT_TITLE, DEFAULT_PARAGRAPHS.map(function(p){ return p.slice(); }));
+      } else {
+        saveLibraryNow();
+        applyArticle(currentArticle());
+      }
+      renderLibList();
+      toast('已覆盖，共 ' + library.articles.length + ' 篇文章');
+    }
+  };
+  fr.onerror = function(){ alert('文件读取失败'); };
+  fr.readAsText(file, 'UTF-8');
+}
+
+function mergeLibraries(target, source){
+  var byId = {};
+  target.articles.forEach(function(a){ byId[a.id] = a; });
+
+  source.articles.forEach(function(raw){
+    var a = normalizeArticle(JSON.parse(JSON.stringify(raw)));
+    var existing = byId[a.id];
+    if(existing){
+      Object.keys(a.explain || {}).forEach(function(k){
+        if(!existing.explain[k]) existing.explain[k] = a.explain[k];
+      });
+      var seenS = {};
+      existing.savedSentences.forEach(function(s){ seenS[cacheKey(s.text)] = 1; });
+      a.savedSentences.forEach(function(s){
+        if(!seenS[cacheKey(s.text)]) existing.savedSentences.push(s);
+      });
+      var seenW = {};
+      existing.savedWords.forEach(function(w){ seenW[w.w] = 1; });
+      a.savedWords.forEach(function(w){
+        if(!seenW[w.w]) existing.savedWords.push(w);
+      });
+    } else {
+      target.articles.push(a);
+      byId[a.id] = a;
+    }
+  });
+  return target;
+}
+
+/* ============================================================
+   21. 收藏与复习
+   ============================================================ */
+var favFilter = { scope: 'this', type: 'sentence' };
+
+function refreshFavBadge(){
+  var article = currentArticle();
+  var total = article
+    ? (article.savedSentences.length + article.savedWords.length)
+    : 0;
+  favCount.textContent = total || '';
+  var ns = $('n-this-sentence'), nw = $('n-this-word');
+  if(ns) ns.textContent = article ? article.savedSentences.length : 0;
+  if(nw) nw.textContent = article ? article.savedWords.length : 0;
+  var tS = 0, tW = 0;
+  library.articles.forEach(function(a){ tS += a.savedSentences.length; tW += a.savedWords.length; });
+  var as = $('n-all-sentence'), aw = $('n-all-word');
+  if(as) as.textContent = tS;
+  if(aw) aw.textContent = tW;
+}
+
+$('favBtn').addEventListener('click', function(){
+  refreshFavBadge();
+  favFilter = { scope: 'this', type: 'sentence' };
+  syncFavTabs();
+  renderFavList();
+  favModal.classList.add('show');
+});
+favClose.addEventListener('click', function(){ favModal.classList.remove('show'); });
+favModal.addEventListener('click', function(e){
+  if(e.target === favModal) favModal.classList.remove('show');
+});
+favTabs.addEventListener('click', function(e){
+  var btn = e.target.closest ? e.target.closest('.fav-tab') : null;
+  if(!btn) return;
+  favFilter.scope = btn.getAttribute('data-scope');
+  favFilter.type = btn.getAttribute('data-type');
+  syncFavTabs();
+  renderFavList();
+});
+function syncFavTabs(){
+  var btns = favTabs.querySelectorAll('.fav-tab');
+  for(var i = 0; i < btns.length; i++){
+    var on = btns[i].getAttribute('data-scope') === favFilter.scope &&
+             btns[i].getAttribute('data-type') === favFilter.type;
+    btns[i].classList.toggle('active', on);
+  }
+}
+function collectFavSentences(){
+  var out = [];
+  var push = function(a, s){
+    out.push({ text: s.text, at: s.at, articleTitle: a.title, articleId: a.id });
+  };
+  if(favFilter.scope === 'this'){
+    var a = currentArticle();
+    if(a) a.savedSentences.forEach(function(s){ push(a, s); });
+  } else {
+    library.articles.forEach(function(a){
+      a.savedSentences.forEach(function(s){ push(a, s); });
+    });
+  }
+  out.sort(function(x, y){ return (y.at || 0) - (x.at || 0); });
+  return out;
+}
+function collectFavWords(){
+  var out = [];
+  var push = function(a, w){
+    out.push(Object.assign({}, w, { articleTitle: a.title, articleId: a.id }));
+  };
+  if(favFilter.scope === 'this'){
+    var a = currentArticle();
+    if(a) a.savedWords.forEach(function(w){ push(a, w); });
+  } else {
+    library.articles.forEach(function(a){
+      a.savedWords.forEach(function(w){ push(a, w); });
+    });
+  }
+  out.sort(function(x, y){ return (y.at || 0) - (x.at || 0); });
+  return out;
+}
+function renderFavList(){
+  if(favFilter.type === 'sentence') renderFavSentences();
+  else renderFavWords();
+}
+function renderFavSentences(){
+  var list = collectFavSentences();
+  if(!list.length){
+    favList.innerHTML = '<div class="fav-empty">' +
+      (favFilter.scope === 'this' ? '本篇还没有收藏句子' : '还没有任何收藏的句子') + '</div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function(item, i){
+    html += '<div class="fav-item" data-kind="sentence" data-idx="' + i + '">' +
+      '<div class="fav-main">' +
+        '<div class="fav-text">' + esc(item.text) + '</div>' +
+        '<div class="fav-meta">' + esc(item.articleTitle) + (item.at ? ' · ' + fmtTime(item.at) : '') + ' · 点击查看结构</div>' +
+      '</div>' +
+      '<div class="fav-actions">' +
+        '<button class="fav-icon del" data-act="delsent" data-idx="' + i + '" title="取消收藏">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>' +
+          '</svg>' +
+        '</button>' +
+      '</div></div>';
+  });
+  favList.innerHTML = html;
+}
+function renderFavWords(){
+  var list = collectFavWords();
+  if(!list.length){
+    favList.innerHTML = '<div class="fav-empty">' +
+      (favFilter.scope === 'this' ? '本篇还没有收藏词汇' : '还没有任何收藏的词汇') + '</div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function(item, i){
+    html += '<div class="fav-item" data-kind="word" data-idx="' + i + '">' +
+      '<div class="fav-main">' +
+        '<div class="fav-word-row">' +
+          '<span class="fav-word">' + esc(item.raw || item.w) + '</span>' +
+          (item.type === 'phrase' ? '<span class="vocab-tag">搭配</span>' : '') +
+          (item.ipa ? '<span class="fav-ipa">' + esc(item.ipa) + '</span>' : '') +
+          (item.pos ? '<span class="fav-pos">' + esc(item.pos) + '</span>' : '') +
+        '</div>' +
+        '<div class="fav-meaning">' +
+          (item.m ? esc(item.m) : '<span style="color:#B8B2A4;font-style:italic;">（暂无释义）</span>') +
+        '</div>' +
+        '<div class="fav-meta">' + esc(item.articleTitle) + (item.at ? ' · ' + fmtTime(item.at) : '') + '</div>' +
+      '</div>' +
+      '<div class="fav-actions">' +
+        '<button class="fav-icon spk" data-act="spkword" data-idx="' + i + '" title="发音">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
+            '<path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/>' +
+          '</svg></button>' +
+        '<button class="fav-icon del" data-act="delword" data-idx="' + i + '" title="取消收藏">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>' +
+          '</svg></button>' +
+      '</div></div>';
+  });
+  favList.innerHTML = html;
+}
+
+favList.addEventListener('click', function(e){
+  var btn = e.target.closest ? e.target.closest('.fav-icon') : null;
+  if(btn){
+    e.stopPropagation();
+    var act = btn.getAttribute('data-act');
+    var idx = parseInt(btn.getAttribute('data-idx'), 10);
+
+    if(act === 'delsent'){
+      var item = collectFavSentences()[idx];
+      if(!item) return;
+      removeFavSentenceFrom(item.articleId, item.text);
+      renderFavList(); refreshFavBadge(); toast('已取消收藏');
+      return;
+    }
+    if(act === 'spkword'){
+      var w = collectFavWords()[idx];
+      if(!w) return;
+      if(btn.classList.contains('playing')) stopSpeak();
+      else speakWord(w.raw || w.w, '', btn);
+      return;
+    }
+    if(act === 'delword'){
+      var w2 = collectFavWords()[idx];
+      if(!w2) return;
+      removeFavWordFrom(w2.articleId, w2.w);
+      renderFavList(); refreshFavBadge(); toast('已取消收藏');
+      return;
+    }
+    return;
+  }
+
+  var card = e.target.closest ? e.target.closest('.fav-item') : null;
+  if(!card) return;
+  if(card.getAttribute('data-kind') !== 'sentence') return;
+  var idx2 = parseInt(card.getAttribute('data-idx'), 10);
+  var sItem = collectFavSentences()[idx2];
+  if(!sItem) return;
+  jumpToSentenceStructure(sItem);
+});
+
+function removeFavSentenceFrom(articleId, text){
+  var a = findArticle(articleId);
+  if(!a) return;
+  var key = cacheKey(text);
+  a.savedSentences = a.savedSentences.filter(function(s){ return cacheKey(s.text) !== key; });
+  saveLibrary();
+}
+function removeFavWordFrom(articleId, w){
+  var a = findArticle(articleId);
+  if(!a) return;
+  a.savedWords = a.savedWords.filter(function(x){ return x.w !== w; });
+  saveLibrary();
+}
+
+function jumpToSentenceStructure(item){
+  favModal.classList.remove('show');
+  if(library.currentId !== item.articleId){
+    var target = findArticle(item.articleId);
+    if(!target){ toast('文章已被删除'); return; }
+    library.currentId = item.articleId;
+    saveLibraryNow();
+    applyArticle(target);
+  }
+  highlightSentenceByText(item.text);
+  setTimeout(function(){ openExplain(item.text); }, 80);
+}
+function highlightSentenceByText(text){
+  var key = cacheKey(text);
+  var sents = articleBody.querySelectorAll('.sentence');
+  var target = null;
+  for(var i = 0; i < sents.length; i++){
+    if(cacheKey(sents[i].textContent) === key){ target = sents[i]; break; }
+  }
+  if(!target) return;
+  var marked = reader.querySelectorAll('.sentence.is-marked');
+  for(var j = 0; j < marked.length; j++) marked[j].classList.remove('is-marked');
+  target.classList.add('is-marked');
+  try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e){}
+}
+
+/* ============================================================
+   22. 导入文章
+   ============================================================ */
+$('importBtn').addEventListener('click', function(){
+  impText.value = '';
+  impUrl.value = '';
+  impMsg.textContent = '';
+  impMsg.classList.remove('err');
+  pendingFileText = null;
+  impFile.value = '';
+  impConfirm.disabled = false;
+  impConfirm.textContent = '导入';
+  switchImpTab('paste');
+  impModal.classList.add('show');
+});
+function closeImp(){ impModal.classList.remove('show'); }
+impCancel.addEventListener('click', closeImp);
+impClose.addEventListener('click', closeImp);
+impModal.addEventListener('click', function(e){
+  if(e.target === impModal) closeImp();
+});
+(function bindImpTabs(){
+  var tabs = document.querySelectorAll('.imp-tab');
+  for(var i = 0; i < tabs.length; i++){
+    (function(tab){
+      tab.addEventListener('click', function(){ switchImpTab(tab.getAttribute('data-tab')); });
+    })(tabs[i]);
+  }
+})();
+function switchImpTab(name){
+  var tabs = document.querySelectorAll('.imp-tab');
+  for(var i = 0; i < tabs.length; i++){
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === name);
+  }
+  $('impPanePaste').classList.toggle('active', name === 'paste');
+  $('impPaneUrl').classList.toggle('active', name === 'url');
+  $('impPaneFile').classList.toggle('active', name === 'file');
+}
+impDrop.addEventListener('click', function(){ impFile.click(); });
+impDrop.addEventListener('dragover', function(e){ e.preventDefault(); impDrop.classList.add('over'); });
+impDrop.addEventListener('dragleave', function(){ impDrop.classList.remove('over'); });
+impDrop.addEventListener('drop', function(e){
+  e.preventDefault();
+  impDrop.classList.remove('over');
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) handleFile(f);
+});
+impFile.addEventListener('change', function(){
+  var f = this.files && this.files[0];
+  if(f) handleFile(f);
+});
+function setImpMsg(msg, isErr){
+  impMsg.textContent = msg || '';
+  impMsg.classList.toggle('err', !!isErr);
+}
+function handleFile(file){
+  var name = file.name || '';
+  var ext = (name.split('.').pop() || '').toLowerCase();
+  pendingFileText = null;
+  setImpMsg('');
+  if(ext === 'pdf'){
+    setImpMsg('不支持 PDF 导入，请转成 .txt 或 .docx，或直接粘贴文本。', true);
+    return;
+  }
+  if(ext === 'txt'){
+    var fr = new FileReader();
+    fr.onload = function(){
+      pendingFileText = String(fr.result || '');
+      setImpMsg('已读取 ' + name + '（' + pendingFileText.length + ' 字符）');
+    };
+    fr.onerror = function(){ setImpMsg('读取失败', true); };
+    fr.readAsText(file, 'UTF-8');
+    return;
+  }
+  if(ext === 'docx'){
+    setImpMsg('正在解析 docx…');
+    loadMammoth().then(function(mammoth){
+      var fr = new FileReader();
+      fr.onload = function(){
+        mammoth.extractRawText({ arrayBuffer: fr.result }).then(function(result){
+          pendingFileText = result.value || '';
+          setImpMsg('已解析 ' + name + '（' + pendingFileText.length + ' 字符）');
+        }).catch(function(err){ setImpMsg('docx 解析失败：' + (err.message || err), true); });
+      };
+      fr.onerror = function(){ setImpMsg('文件读取失败', true); };
+      fr.readAsArrayBuffer(file);
+    }).catch(function(err){ setImpMsg('无法加载 docx 解析库：' + err.message, true); });
+    return;
+  }
+  if(ext === 'doc'){ setImpMsg('不支持 .doc 老格式。请在 Word 里另存为 .docx 后重试。', true); return; }
+  setImpMsg('不支持的文件格式：' + ext + '（仅支持 .txt 和 .docx）', true);
+}
+var mammothLoadPromise = null;
+function loadMammoth(){
+  if(window.mammoth) return Promise.resolve(window.mammoth);
+  if(mammothLoadPromise) return mammothLoadPromise;
+  mammothLoadPromise = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js';
+    s.onload = function(){ resolve(window.mammoth); };
+    s.onerror = function(){ mammothLoadPromise = null; reject(new Error('CDN 加载失败，请检查网络')); };
+    document.head.appendChild(s);
+  });
+  return mammothLoadPromise;
+}
+function guessTitle(text){
+  var first = String(text || '').split(/\n+/).map(function(s){ return s.trim(); })
+    .filter(function(s){ return s.length > 0; })[0] || '';
+  if(!first) return '';
+  if(first.length > 40) return '';
+  if(isOptionLine(first)) return '';
+  if(/[.!?。！？…]["'’”)）\]]?$/.test(first)) return '';
+  return first;
+}
+function applyImported(text, fallbackTitle){
+  var paragraphs = parseArticle(text);
+  var totalSents = paragraphs.reduce(function(n, p){ return n + p.length; }, 0);
+  if(!totalSents){ setImpMsg('没有解析出有效句子，请检查内容', true); return false; }
+  var t = guessTitle(text) || fallbackTitle || '导入的文章';
+  var article = createArticle(t, paragraphs);
+  applyArticle(article);
+  closeImp();
+  toast('已导入 ' + totalSents + ' 句 / ' + paragraphs.length + ' 段');
+
+  if(getCfg()){
+    setTimeout(function(){ preAnalyzeArticle(article, { silent: true }); }, 400);
+  }
+  return true;
+}
+impConfirm.addEventListener('click', function(){
+  var activeTab = document.querySelector('.imp-tab.active').getAttribute('data-tab');
+  if(activeTab === 'paste'){
+    var text = impText.value.trim();
+    if(!text){ setImpMsg('请粘贴一些文本', true); return; }
+    applyImported(text, '粘贴的文章');
+    return;
+  }
+  if(activeTab === 'url'){
+    var url = impUrl.value.trim();
+    if(!url){ setImpMsg('请输入网页链接', true); return; }
+    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    impConfirm.disabled = true;
+    impConfirm.textContent = '抓取中…';
+    setImpMsg('正在抓取网页正文，请稍候…');
+    fetchArticleFromUrl(url).then(function(text){
+      impConfirm.disabled = false;
+      impConfirm.textContent = '导入';
+      if(!text || text.replace(/\s/g, '').length < 50){
+        setImpMsg('抓取内容过少，可能被网站拦截，请改用「粘贴文本」', true);
+        return;
+      }
+      applyImported(text, '网页文章');
+    }).catch(function(err){
+      impConfirm.disabled = false;
+      impConfirm.textContent = '导入';
+      setImpMsg('抓取失败：' + (err.message || err) + '（可改用「粘贴文本」）', true);
+    });
+    return;
+  }
+  if(!pendingFileText){ setImpMsg('请先选择一个 .txt 或 .docx 文件', true); return; }
+  var f = impFile.files && impFile.files[0];
+  applyImported(pendingFileText, f ? f.name.replace(/\.[^.]+$/, '') : '导入的文章');
+});
+
+/* ============================================================
+   23. 启动（异步：先加载 IDB）
+   ============================================================ */
+(function init(){
+  loadLibraryAsync().then(function(ok){
+    if(!ok || !library.articles.length){
+      library = { articles: [], currentId: null };
+      createArticle(DEFAULT_TITLE, DEFAULT_PARAGRAPHS.map(function(p){ return p.slice(); }));
+    } else if(!currentArticle()){
+      library.currentId = library.articles[0].id;
+      saveLibraryNow();
+    }
+    applyArticle(currentArticle());
+    refreshStatus();
+    refreshFavBadge();
+  }).catch(function(err){
+    console.error('初始化失败', err);
+    library = { articles: [], currentId: null };
+    state.title = DEFAULT_TITLE;
+    state.paragraphs = DEFAULT_PARAGRAPHS.map(function(p){ return p.slice(); });
+    renderText();
+    refreshStatus();
+    toast('存储初始化失败，本次数据不会保存');
+  });
+})();
+
+})();
+</script>
+</body>
+</html>
+<!--
+```
+
+主要改动落点（方便你比对）：
+
+· CSS：追加 .vocab-tag、.sub-list/.sub-item、.sentence.is-option
+· 参数：PRE_MAX_TOKENS 4000→5000，新增 SUB_MIN_WORDS/SUB_MIN_CHARS
+· 预处理：新增 OPTION_RE / isOptionLine / endsSentenceStrict / countSentences / regroupBySentences / normalizeImportText；parseArticle 改成先 normalize 再按行拆句
+· 分句：splitSentences 增加 \b([A-D])\. 保护
+· guessTitle 收紧：首行 ≤40 字、非选项、无句末标点
+· Schema：validateExplain 里 vocab 加 type，structure 加 sub: []
+· analyzeBatch 提示词升级：vocab 支持 type: "word"/"phrase"，优先搭配
+· 新增 requestSubAnalysis / renderSubList；openExplain 记录 currentExplainText；showChunkExplain 支持按需二级拆解
+· favWordToggle 加第 5 参 type；renderFavWords 显示"搭配"标签
+· handleFile 拦截 PDF；.formats 文案更新
+· UI 文案"生词"→"词汇"-->
