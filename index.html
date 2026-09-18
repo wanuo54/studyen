@@ -101,6 +101,7 @@
   #articleBody .para{margin:0 0 20px;}
   .sentence{border-radius:4px;transition:background .22s ease;}
   .sentence.is-marked{background:var(--highlight-soft);box-shadow:0 0 0 2px var(--highlight-soft);}
+  .sentence.is-option{display:block;padding-left:1.4em;text-indent:-1.4em;margin-top:2px;}
   .w{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
     padding:0 1px;margin:0 -1px;border-radius:3px;}
   .hint{font-size:12px;color:var(--ink-soft);text-align:center;margin:-4px 0 26px;
@@ -432,7 +433,6 @@
   .imp-msg{margin-top:10px;font-size:11.5px;color:var(--ink-soft);min-height:16px;line-height:1.5;}
   .imp-msg.err{color:#B54A3E;}
 
-  /* 全文预解析进度条 */
   #aiProgress{
     position:absolute;z-index:46;left:50%;bottom:18px;
     transform:translate(-50%,16px);
@@ -473,6 +473,49 @@
     max-width:80vw;text-align:center;
   }
   #toast.show{opacity:1;transform:translate(-50%,0);}
+
+  /* ---- 重点词汇：搭配标签 ---- */
+  .vocab-tag{
+    display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;
+    background:var(--g-phrase-bg);color:var(--g-phrase);border-radius:20px;
+    margin-left:6px;vertical-align:middle;font-family:'Inter',sans-serif;
+    font-style:normal;letter-spacing:.2px;
+  }
+  .vocab-item.is-phrase .w{font-style:italic;}
+
+  /* ---- 二级拆解 ---- */
+  .sub-list{margin-top:12px;border-top:1px dashed var(--rule);padding-top:10px;}
+  .sub-item{
+    padding:8px 10px;margin-bottom:8px;border-radius:0 10px 10px 0;
+    border-left:3px solid var(--rule);
+  }
+  .sub-item.group-main{border-left-color:var(--g-main);background:rgba(47,93,66,.05);}
+  .sub-item.group-clause{border-left-color:var(--g-clause);background:rgba(44,74,115,.05);}
+  .sub-item.group-phrase{border-left-color:var(--g-phrase);background:rgba(122,80,35,.05);}
+  .sub-item.group-insert{border-left-color:var(--g-insert);background:rgba(110,63,118,.05);}
+  .sub-head{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;}
+  .sub-tag{
+    font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;
+    font-family:'Inter',sans-serif;
+  }
+  .sub-tag.group-main{background:var(--g-main-bg);color:var(--g-main);}
+  .sub-tag.group-clause{background:var(--g-clause-bg);color:var(--g-clause);}
+  .sub-tag.group-phrase{background:var(--g-phrase-bg);color:var(--g-phrase);}
+  .sub-tag.group-insert{background:var(--g-insert-bg);color:var(--g-insert);}
+  .sub-role{font-size:11px;color:var(--ink-soft);font-style:italic;}
+  .sub-text{
+    font-family:'Newsreader',serif;font-size:14.5px;font-weight:600;
+    margin-bottom:2px;word-break:break-word;
+  }
+  .sub-desc{font-size:12.5px;line-height:1.55;color:var(--ink-soft);}
+  .sub-btn{
+    display:block;width:100%;margin-top:12px;padding:10px 12px;
+    border-radius:11px;border:1px dashed var(--rule);background:var(--paper);
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+    color:var(--accent);cursor:pointer;text-align:center;
+  }
+  .sub-btn:hover{background:var(--paper-dim);border-style:solid;}
+  .sub-btn:disabled{opacity:.6;cursor:default;color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -605,9 +648,9 @@
       </div>
       <div class="fav-tabs" id="favTabs">
         <button class="fav-tab active" data-scope="this" data-type="sentence">本篇 · 句子<span class="n" id="n-this-sentence">0</span></button>
-        <button class="fav-tab" data-scope="this" data-type="word">本篇 · 生词<span class="n" id="n-this-word">0</span></button>
+        <button class="fav-tab" data-scope="this" data-type="word">本篇 · 词汇<span class="n" id="n-this-word">0</span></button>
         <button class="fav-tab" data-scope="all" data-type="sentence">全部 · 句子<span class="n" id="n-all-sentence">0</span></button>
-        <button class="fav-tab" data-scope="all" data-type="word">全部 · 生词<span class="n" id="n-all-word">0</span></button>
+        <button class="fav-tab" data-scope="all" data-type="word">全部 · 词汇<span class="n" id="n-all-word">0</span></button>
       </div>
       <div class="fav-list" id="favList"></div>
     </div>
@@ -668,7 +711,7 @@
         <div class="drop" id="impDrop">
           <strong>点击选择文件，或拖到这里</strong>
           支持 .txt 和 .docx
-          <div class="formats">.doc 老格式请先另存为 .docx</div>
+          <div class="formats">.doc 请另存为 .docx；不支持 PDF</div>
         </div>
         <input type="file" id="impFile" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
       </div>
@@ -737,7 +780,11 @@ var PRE_BATCH = 4;              // 每批送给 AI 的句子数
 var PRE_MAX_SENTENCES = 150;    // 单篇最多预解析句数（防止失控）
 var PRE_BATCH_DELAY = 150;      // 批次间隔
 var PRE_TIMEOUT_MS = 60000;
-var PRE_MAX_TOKENS = 4000;
+var PRE_MAX_TOKENS = 5000;
+
+/* 二级拆解触发阈值 */
+var SUB_MIN_WORDS = 8;
+var SUB_MIN_CHARS = 45;
 
 /* ============================================================
    1. IndexedDB 封装
@@ -1029,6 +1076,7 @@ var currentSentenceText = '';
 var currentToolbarRect  = null;
 var currentProvider = 'openrouter';
 var pendingFileText = null;
+var currentExplainText = '';
 
 /* ============================================================
    5. 配置
@@ -1219,7 +1267,10 @@ function validateExplain(raw){
       if(!v) continue;
       var w = String(v.w || '').trim();
       var m = String(v.m || '').trim();
-      if(w && m) out.vocab.push({ w: w, m: m });
+      if(!w || !m) continue;
+      var tp = String(v.type || 'word').toLowerCase();
+      if(tp !== 'phrase') tp = 'word';
+      out.vocab.push({ w: w, m: m, type: tp });
     }
   }
 
@@ -1235,7 +1286,8 @@ function validateExplain(raw){
         text: text,
         tag: tag,
         role: String(c.role || '').trim(),
-        desc: String(c.desc || '').trim()
+        desc: String(c.desc || '').trim(),
+        sub: []
       });
     }
   }
@@ -1420,7 +1472,7 @@ function favSentenceToggle(text){
   return { ok: true, action: 'added' };
 }
 
-function favWordToggle(raw, meaning, pos, ipa){
+function favWordToggle(raw, meaning, pos, ipa, type){
   var article = currentArticle();
   if(!article) return { ok: false, reason: 'no-article' };
   var w = normalizeWord(raw);
@@ -1440,6 +1492,7 @@ function favWordToggle(raw, meaning, pos, ipa){
   article.savedWords.push({
     w: w, raw: raw,
     m: meaning || '', pos: pos || '', ipa: ipa || '',
+    type: type === 'phrase' ? 'phrase' : 'word',
     at: Date.now()
   });
   saveLibrary();
@@ -1515,6 +1568,7 @@ function renderText(){
       var sent = document.createElement('span');
       sent.className = 'sentence';
       sent.dataset.sid = pi + ':' + si;
+      if(isOptionLine(text)) sent.classList.add('is-option');
       String(text).split(/\s+/).filter(Boolean).forEach(function(w, i){
         if(i > 0) sent.appendChild(document.createTextNode(' '));
         var ws = document.createElement('span');
@@ -1554,6 +1608,8 @@ function splitSentences(text){
     var re = new RegExp('\\b' + a + '\\.', 'g');
     prot = prot.replace(re, function(m){ return m.slice(0, -1) + '\u2024'; });
   });
+  // 行首 A. B. C. D.（选项）不当句末
+  prot = prot.replace(/\b([A-D])\.(?=\s)/g, function(m, ch){ return ch + '\u2024'; });
   var marked = prot.replace(/([.!?。！？…]+["'’”)）\]]?)\s*/g, '$1\u0001');
   var out = [];
   marked.split('\u0001').forEach(function(s){
@@ -1571,24 +1627,98 @@ function cleanMarkdown(t){
     .replace(/^\s*>\s?/gm, '')
     .replace(/`{1,3}/g, '');
 }
+
+/* ---- 导入文本预处理 ---- */
+var OPTION_RE = /^\s*(?:[\(（]?\s*[A-Da-d]\s*[\)）.．、]|①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|\d+\s*[.．、\)）])\s*/;
+
+function isOptionLine(line){
+  return OPTION_RE.test(String(line || ''));
+}
+function endsSentenceStrict(s){
+  return /[.!?。！？…]["'’”)）\]]?$/.test(String(s || '').trim());
+}
+function countSentences(s){
+  return splitSentences(s).length;
+}
+
+/* 无空行时，按每 4 句插空行分段 */
+function regroupBySentences(text){
+  var lines = text.split('\n');
+  var out = [], count = 0;
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i];
+    if(line === ''){
+      if(out.length && out[out.length - 1] !== '') out.push('');
+      count = 0;
+      continue;
+    }
+    out.push(line);
+    if(isOptionLine(line)) continue;
+    count += countSentences(line);
+    if(count >= 4 && i < lines.length - 1){
+      var nxt = lines[i + 1];
+      if(nxt && nxt !== '' && !isOptionLine(nxt)){
+        out.push('');
+        count = 0;
+      }
+    }
+  }
+  return out.join('\n');
+}
+
+/* 主入口：规范化导入文本 */
+function normalizeImportText(text){
+  var t = String(text || '').replace(/\r\n?/g, '\n')
+                            .replace(/[\u200B-\u200D\uFEFF]/g, '');
+  var hasBlank = /\n\s*\n/.test(t);
+  var lines = t.split('\n');
+  var out = [], buf = '';
+
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i].replace(/[ \t]+/g, ' ').replace(/\s+$/, '').trim();
+
+    if(!line){
+      if(buf){ out.push(buf); buf = ''; }
+      if(out.length && out[out.length - 1] !== '') out.push('');
+      continue;
+    }
+    if(isOptionLine(line)){
+      if(buf){ out.push(buf); buf = ''; }
+      out.push(line);
+      continue;
+    }
+    if(!buf){
+      buf = line;
+    } else if(endsSentenceStrict(buf)){
+      out.push(buf);
+      buf = line;
+    } else {
+      buf += ' ' + line;
+    }
+  }
+  if(buf) out.push(buf);
+
+  var joined = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if(!hasBlank) joined = regroupBySentences(joined);
+  return joined;
+}
+
 function parseArticle(rawText){
   var t = String(rawText || '').replace(/\r\n?/g, '\n');
   t = cleanMarkdown(t);
-  var paras = t.split(/\n\s*\n+/);
-  if(paras.length <= 1) paras = t.split(/\n+/);
+  t = normalizeImportText(t);
+  var blocks = t.split(/\n\s*\n+/);
   var result = [];
-  paras.forEach(function(block){
-    var line = block.replace(/[ \t]+/g, ' ').replace(/\s+$/, '').trim();
-    if(!line) return;
-    var sents = splitSentences(line);
+  blocks.forEach(function(block){
+    var lines = block.split('\n').map(function(l){
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    var sents = [];
+    lines.forEach(function(line){
+      splitSentences(line).forEach(function(s){ sents.push(s); });
+    });
     if(sents.length) result.push(sents);
   });
-  if(result.length > 8){
-    var totalSents = result.reduce(function(n, p){ return n + p.length; }, 0);
-    if(totalSents === result.length){
-      result = [result.map(function(p){ return p[0]; })];
-    }
-  }
   return result;
 }
 
@@ -1643,15 +1773,12 @@ function positionFloating(el, rect, avoidRect){
   var top, flip;
 
   if(spaceBelow >= h + GAP){
-    // 放在句子下方（优先），箭头朝上
     top = avBottom + GAP;
     flip = true;
   } else if(spaceAbove >= h + GAP){
-    // 放在句子上方，箭头朝下
     top = avTop - h - GAP;
     flip = false;
   } else if(spaceBelow >= spaceAbove){
-    // 两侧都放不下：贴底，尽量不压住句子
     top = dev.height - h - EDGE;
     if(top < avBottom + GAP) top = avBottom + GAP;
     flip = true;
@@ -1730,7 +1857,6 @@ function selectSentence(sentenceEl, anchorEl){
   tbFavBtn.classList.toggle('is-on', saved);
   tbFavBtn.querySelector('.lbl').textContent = saved ? '已收藏' : '收藏';
 
-  // 水平对齐到点击的词，垂直方向避让整句
   currentToolbarRect = {
     anchor: (anchorEl || sentenceEl).getBoundingClientRect(),
     avoid: sentenceEl.getBoundingClientRect()
@@ -1853,7 +1979,7 @@ wpFav.addEventListener('click', function(e){
   if(!res.ok) return;
 
   wpFav.classList.toggle('is-on', res.action === 'added');
-  toast(res.action === 'added' ? '已收藏到生词本' : '已取消收藏');
+  toast(res.action === 'added' ? '已收藏到词汇本' : '已取消收藏');
 
   if(res.action === 'added' && !meaning){
     lookupWord(normalizeWord(raw)).catch(function(){});
@@ -1920,6 +2046,7 @@ function openSheet(){ scrim.classList.add('show'); sheet.classList.add('show'); 
 function closeSheet(){ scrim.classList.remove('show'); sheet.classList.remove('show'); }
 
 function openExplain(text){
+  currentExplainText = text;
   hideToolbar();
   var key = cacheKey(text);
   if(!key) return;
@@ -1990,6 +2117,80 @@ function requestExplain(text, key){
   });
 }
 
+/* 对某个长片段按需二级拆解 */
+function requestSubAnalysis(sentenceText, chunkIdx, onDone){
+  var article = currentArticle();
+  if(!article) return;
+  var key = cacheKey(sentenceText);
+  var ex = article.explain[key];
+  if(!ex || !ex.d || !Array.isArray(ex.d.structure)) return;
+  var chunk = ex.d.structure[chunkIdx];
+  if(!chunk) return;
+
+  if(chunk.sub && chunk.sub.length){ onDone && onDone(chunk.sub); return; }
+
+  var cfg = getCfg();
+  if(!cfg){ onDone && onDone(null, '请先配置 AI 接口'); return; }
+
+  var prompt = [
+    { role: 'system', content:
+      '你是一个专业的英语语法讲解助手。用户会给你一个英语句子片段（可能是一个长从句、短语或插入语）。\n' +
+      '请把它进一步拆解成更小的语法成分，返回严格的 JSON，不要任何多余文字：\n' +
+      '{"sub":[{"text":"子片段原文","tag":"标签","role":"语法作用","desc":"中文解释"}]}\n\n' +
+      'tag 只能取以下之一：main, subj_clause, obj_clause, pred_clause, attr_clause, adv_clause, ' +
+      'prep_phrase, inf_phrase, ppl_phrase, appositive, parenthetical。\n\n' +
+      '要求：\n1. sub 数组按原顺序排列，拼起来能还原原片段。\n' +
+      '2. 只拆出有语法意义的成分，不要逐词拆。\n' +
+      '3. desc 用中文，简洁（20 字以内）。\n' +
+      '4. 只输出 JSON，不要 markdown 代码块。' },
+    { role: 'user', content: chunk.text }
+  ];
+
+  callAI(prompt, function(resp){
+    var obj = extractJSON(resp);
+    var subs = (obj && Array.isArray(obj.sub)) ? obj.sub : [];
+    var clean = [];
+    for(var i = 0; i < subs.length; i++){
+      var s = subs[i];
+      if(!s) continue;
+      var tx = String(s.text || '').trim();
+      if(!tx) continue;
+      var tag = String(s.tag || 'main');
+      if(VALID_TAGS.indexOf(tag) === -1) tag = 'main';
+      clean.push({
+        text: tx, tag: tag,
+        role: String(s.role || '').trim(),
+        desc: String(s.desc || '').trim()
+      });
+    }
+    if(!clean.length){ onDone && onDone(null, 'AI 未能拆解'); return; }
+    chunk.sub = clean;
+    ex.t = Date.now();
+    saveLibrary();
+    onDone && onDone(clean);
+  }, function(err){
+    onDone && onDone(null, (err && err.message) || '拆解失败');
+  }, { timeout: 20000, retries: 1 });
+}
+
+function renderSubList(subs){
+  var html = '<div class="sub-list">';
+  for(var i = 0; i < subs.length; i++){
+    var s = subs[i];
+    var m = tagMeta(s.tag);
+    html += '<div class="sub-item group-' + m.group + '">' +
+      '<div class="sub-head">' +
+        '<span class="sub-tag group-' + m.group + '">' + m.label + '</span>' +
+        (s.role ? '<span class="sub-role">' + esc(s.role) + '</span>' : '') +
+      '</div>' +
+      '<div class="sub-text">' + esc(s.text) + '</div>' +
+      '<div class="sub-desc">' + esc(s.desc) + '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderLoading(){
   sheetBody.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在生成讲解…</div>';
 }
@@ -2000,15 +2201,18 @@ function renderExplain(data){
 
   var vocabHtml = vocab.map(function(v){
     var isFav = isWordSaved(v.w);
-    return '<div class="vocab-item">' +
+    var isPhrase = v.type === 'phrase';
+    return '<div class="vocab-item' + (isPhrase ? ' is-phrase' : '') + '">' +
       '<span class="w">' + esc(v.w) + '</span>' +
+      (isPhrase ? '<span class="vocab-tag">搭配</span>' : '') +
       '<span class="m">' + esc(v.m) + '</span>' +
       '<button class="spk" data-word="' + esc(v.w) + '" title="发音">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
           '<path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/>' +
         '</svg></button>' +
       '<button class="v-fav' + (isFav ? ' is-on' : '') + '" ' +
-        'data-vfav-word="' + esc(v.w) + '" data-vfav-meaning="' + esc(v.m) + '" title="收藏到生词本">' +
+        'data-vfav-word="' + esc(v.w) + '" data-vfav-meaning="' + esc(v.m) + '" ' +
+        'data-vfav-type="' + (isPhrase ? 'phrase' : 'word') + '" title="收藏到词汇本">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
           '<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>' +
         '</svg></button>' +
@@ -2044,25 +2248,30 @@ function renderExplain(data){
 
   var spkBtns = sheetBody.querySelectorAll('.vocab-item .spk');
   for(var si = 0; si < spkBtns.length; si++){
-    spkBtns[si].addEventListener('click', function(e){
-      e.stopPropagation();
-      var w = this.getAttribute('data-word');
-      if(this.classList.contains('playing')) stopSpeak();
-      else speakWord(w, '', this);
-    });
+    (function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var w = this.getAttribute('data-word');
+        if(this.classList.contains('playing')) stopSpeak();
+        else speakWord(w, '', this);
+      });
+    })(spkBtns[si]);
   }
 
   var vFavBtns = sheetBody.querySelectorAll('.vocab-item .v-fav');
   for(var vi = 0; vi < vFavBtns.length; vi++){
-    vFavBtns[vi].addEventListener('click', function(e){
-      e.stopPropagation();
-      var raw = this.getAttribute('data-vfav-word');
-      var mean = this.getAttribute('data-vfav-meaning') || '';
-      var res = favWordToggle(raw, mean, '', '');
-      if(!res.ok) return;
-      this.classList.toggle('is-on', res.action === 'added');
-      toast(res.action === 'added' ? '已收藏到生词本' : '已取消收藏');
-    });
+    (function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var raw = this.getAttribute('data-vfav-word');
+        var mean = this.getAttribute('data-vfav-meaning') || '';
+        var tp = this.getAttribute('data-vfav-type') || 'word';
+        var res = favWordToggle(raw, mean, '', '', tp);
+        if(!res.ok) return;
+        this.classList.toggle('is-on', res.action === 'added');
+        toast(res.action === 'added' ? '已收藏到词汇本' : '已取消收藏');
+      });
+    })(vFavBtns[vi]);
   }
 
   var tToggle = $('tToggle');
@@ -2075,14 +2284,16 @@ function renderExplain(data){
 
   var tabs = sheetBody.querySelectorAll('.tab');
   for(var i = 0; i < tabs.length; i++){
-    tabs[i].addEventListener('click', function(){
-      var allTabs = sheetBody.querySelectorAll('.tab');
-      var allPanes = sheetBody.querySelectorAll('.pane');
-      for(var j = 0; j < allTabs.length; j++) allTabs[j].classList.remove('active');
-      for(var j = 0; j < allPanes.length; j++) allPanes[j].classList.remove('active');
-      this.classList.add('active');
-      $('pane-' + this.getAttribute('data-pane')).classList.add('active');
-    });
+    (function(tab){
+      tab.addEventListener('click', function(){
+        var allTabs = sheetBody.querySelectorAll('.tab');
+        var allPanes = sheetBody.querySelectorAll('.pane');
+        for(var j = 0; j < allTabs.length; j++) allTabs[j].classList.remove('active');
+        for(var k = 0; k < allPanes.length; k++) allPanes[k].classList.remove('active');
+        this.classList.add('active');
+        $('pane-' + this.getAttribute('data-pane')).classList.add('active');
+      });
+    })(tabs[i]);
   }
 
   var slot = $('explainSlot');
@@ -2094,18 +2305,55 @@ function renderExplain(data){
     for(var i = 0; i < chunks.length; i++) chunks[i].classList.remove('is-active');
     var tgt = sheetBody.querySelector('.chunk[data-idx="' + idx + '"]');
     if(tgt) tgt.classList.add('is-active');
+
+    var subHtml = '';
+    var wordCount = String(c.text || '').split(/\s+/).filter(Boolean).length;
+    var isLong = wordCount >= SUB_MIN_WORDS || String(c.text || '').length >= SUB_MIN_CHARS;
+    var canSub = isLong && c.tag !== 'main';
+
+    if(c.sub && c.sub.length){
+      subHtml = renderSubList(c.sub);
+    } else if(canSub){
+      subHtml = '<button class="sub-btn" data-sub-idx="' + idx + '">深入拆解这段结构 →</button>';
+    }
+
     slot.innerHTML =
       '<div class="explain-card">' +
-        '<span class="tagline group-' + meta.group + '">' + meta.label + (c.role ? ' · ' + esc(c.role) : '') + '</span>' +
+        '<span class="tagline group-' + meta.group + '">' + meta.label +
+          (c.role ? ' · ' + esc(c.role) : '') + '</span>' +
         '<div class="chunk-text">' + esc(c.text) + '</div>' +
         '<p class="desc">' + esc(c.desc) + '</p>' +
+        subHtml +
       '</div>';
+
+    var subBtn = slot.querySelector('.sub-btn');
+    if(subBtn){
+      subBtn.addEventListener('click', function(){
+        var i = parseInt(this.getAttribute('data-sub-idx'), 10);
+        var self = this;
+        self.disabled = true;
+        self.textContent = 'AI 拆解中…';
+        requestSubAnalysis(currentExplainText, i, function(subs, err){
+          if(err || !subs){
+            self.disabled = false;
+            self.textContent = '拆解失败：' + (err || '未知错误') + '，点击重试';
+            return;
+          }
+          var wrap = self.parentNode;
+          var div = document.createElement('div');
+          div.innerHTML = renderSubList(subs);
+          wrap.replaceChild(div.firstChild, self);
+        });
+      });
+    }
   }
   var chunks = sheetBody.querySelectorAll('.chunk');
-  for(var i = 0; i < chunks.length; i++){
-    chunks[i].addEventListener('click', function(){
-      showChunkExplain(this.getAttribute('data-idx'));
-    });
+  for(var ci = 0; ci < chunks.length; ci++){
+    (function(ch){
+      ch.addEventListener('click', function(){
+        showChunkExplain(parseInt(this.getAttribute('data-idx'), 10));
+      });
+    })(chunks[ci]);
   }
   if(structure.length) showChunkExplain(0);
 }
@@ -2113,7 +2361,7 @@ function renderExplain(data){
 /* ============================================================
    19b. 全文预解析（导入后自动调用 AI 分析整篇并缓存）
    ============================================================ */
-var preJobs = {};          // articleId -> job
+var preJobs = {};
 var currentPreJob = null;
 
 function showAiProgress(done, total){
@@ -2127,7 +2375,6 @@ aiProgressStop.addEventListener('click', function(){
   if(currentPreJob) currentPreJob.cancelled = true;
 });
 
-/* 收集文章里尚未解析的句子（按 key 去重） */
 function sentenceList(article, onlyMissing){
   var out = [], seen = {};
   article.paragraphs.forEach(function(p){
@@ -2145,7 +2392,6 @@ function sentenceList(article, onlyMissing){
   return out;
 }
 
-/* 一批句子 → 一次 AI 调用 */
 function analyzeBatch(article, batch){
   var lines = batch.map(function(s, i){ return (i + 1) + '. ' + s.text; }).join('\n');
 
@@ -2154,7 +2400,7 @@ function analyzeBatch(article, batch){
       '你是一个专业的英语语法讲解助手。用户会给你 N 个英语句子（按编号排列）。' +
       '请返回严格的 JSON，不要任何多余文字，格式如下：\n' +
       '{"items":[{"translation":"整句中文翻译",' +
-      '"vocab":[{"w":"重点单词","m":"中文释义"}],' +
+      '"vocab":[{"w":"单词或固定搭配","m":"中文释义","type":"word 或 phrase"}],' +
       '"structure":[{"text":"片段原文","tag":"标签","role":"语法作用","desc":"中文解释"}]}]}\n\n' +
       'tag 只能取以下之一：main, subj_clause, obj_clause, pred_clause, attr_clause, adv_clause, ' +
       'prep_phrase, inf_phrase, ppl_phrase, appositive, parenthetical。\n\n' +
@@ -2162,7 +2408,7 @@ function analyzeBatch(article, batch){
       '1. items 的长度必须等于输入句子数量，顺序一一对应，不能省略任何一句。\n' +
       '2. structure 按原句顺序排列，拼起来能还原原句。\n' +
       '3. desc 用中文，简洁（20 字以内）。\n' +
-      '4. vocab 每句挑 2-3 个值得学习的词。\n' +
+      '4. vocab 每句挑 2-3 个值得学习的词或搭配；优先包含 1-2 个固定搭配（type="phrase"），没有搭配就只给单词（type="word"）。\n' +
       '5. 只输出 JSON，不要 markdown 代码块。' },
     { role: 'user', content: lines }
   ];
@@ -2191,7 +2437,10 @@ function analyzeBatch(article, batch){
         if(Array.isArray(raw.vocab)){
           for(var vi = 0; vi < raw.vocab.length && d.vocab.length < 8; vi++){
             var v = raw.vocab[vi];
-            if(v && v.w && v.m) d.vocab.push({ w: String(v.w).trim(), m: String(v.m).trim() });
+            if(!v || !v.w || !v.m) continue;
+            var tp = String(v.type || 'word').toLowerCase();
+            if(tp !== 'phrase') tp = 'word';
+            d.vocab.push({ w: String(v.w).trim(), m: String(v.m).trim(), type: tp });
           }
         }
         if(Array.isArray(raw.structure)){
@@ -2205,7 +2454,8 @@ function analyzeBatch(article, batch){
             d.structure.push({
               text: tx, tag: tag,
               role: String(c.role || '').trim(),
-              desc: String(c.desc || '').trim()
+              desc: String(c.desc || '').trim(),
+              sub: []
             });
           }
         }
@@ -2222,7 +2472,6 @@ function analyzeBatch(article, batch){
   });
 }
 
-/* 入口：对整篇文章做预解析 */
 function preAnalyzeArticle(article, opts){
   opts = opts || {};
   if(!article) return;
@@ -2578,7 +2827,7 @@ function renderFavWords(){
   var list = collectFavWords();
   if(!list.length){
     favList.innerHTML = '<div class="fav-empty">' +
-      (favFilter.scope === 'this' ? '本篇还没有收藏生词' : '还没有任何收藏的生词') + '</div>';
+      (favFilter.scope === 'this' ? '本篇还没有收藏词汇' : '还没有任何收藏的词汇') + '</div>';
     return;
   }
   var html = '';
@@ -2587,6 +2836,7 @@ function renderFavWords(){
       '<div class="fav-main">' +
         '<div class="fav-word-row">' +
           '<span class="fav-word">' + esc(item.raw || item.w) + '</span>' +
+          (item.type === 'phrase' ? '<span class="vocab-tag">搭配</span>' : '') +
           (item.ipa ? '<span class="fav-ipa">' + esc(item.ipa) + '</span>' : '') +
           (item.pos ? '<span class="fav-pos">' + esc(item.pos) + '</span>' : '') +
         '</div>' +
@@ -2749,6 +2999,10 @@ function handleFile(file){
   var ext = (name.split('.').pop() || '').toLowerCase();
   pendingFileText = null;
   setImpMsg('');
+  if(ext === 'pdf'){
+    setImpMsg('不支持 PDF 导入，请转成 .txt 或 .docx，或直接粘贴文本。', true);
+    return;
+  }
   if(ext === 'txt'){
     var fr = new FileReader();
     fr.onload = function(){
@@ -2793,8 +3047,11 @@ function loadMammoth(){
 function guessTitle(text){
   var first = String(text || '').split(/\n+/).map(function(s){ return s.trim(); })
     .filter(function(s){ return s.length > 0; })[0] || '';
-  if(first.length > 0 && first.length <= 40) return first;
-  return '';
+  if(!first) return '';
+  if(first.length > 40) return '';
+  if(isOptionLine(first)) return '';
+  if(/[.!?。！？…]["'’”)）\]]?$/.test(first)) return '';
+  return first;
 }
 function applyImported(text, fallbackTitle){
   var paragraphs = parseArticle(text);
@@ -2806,7 +3063,6 @@ function applyImported(text, fallbackTitle){
   closeImp();
   toast('已导入 ' + totalSents + ' 句 / ' + paragraphs.length + ' 段');
 
-  // 导入后立即用 AI 解析全文并缓存
   if(getCfg()){
     setTimeout(function(){ preAnalyzeArticle(article, { silent: true }); }, 400);
   }
@@ -2877,23 +3133,19 @@ impConfirm.addEventListener('click', function(){
 </script>
 </body>
 </html>
-<!--```
-这是修改后的 HTML 文件，解决了两个问题：长按句子时工具栏不再遮挡高亮句，导入文章后 AI 自动批量解析全文并存储，后续长按即可秒显句意。
+<!--
+```
 
-```html
-交互体验与 AI 预解析机制
+主要改动落点（方便你比对）：
 
-这份代码主要优化了两个使用环节，让阅读和查词都更顺手。
-
-工具条避让逻辑
-长按句子时，工具条不再直接盖住你选中的句子。代码根据句子在屏幕上的位置自动判断：优先显示在句子下方，如果下方空间不够就翻到上方，两边都放不下时贴底显示并尽量避开句子区域。这样高亮句始终完整可见。
-
-导入后自动全文解析
-导入文章时，只要配置了 AI 接口，系统会在后台分批调用 AI 解析整篇文章的句子。进度条显示解析进度，完成后长按任意句子即可直接读取缓存的句意和结构，不再需要等待网络请求。解析结果会随文章一起存入本地 IndexedDB，下次打开仍然有效。
-
-预解析的细节控制
-为了避免一次性请求过多，每批解析 4 个句子，最多处理 150 句。过程中可点击进度条上的“停止”按钮中断。如果导入时还没配置 AI，会自动跳过，不会报错。
-
----
-
-优化建议： 代码中已有全文预解析的参数（如每批 4 句、最多 150 句），您可以按需调整 PRE_BATCH、PRE_MAX_SENTENCES 等变量的值；若 AI 返回的结构描述不够准确，可修改 analyzeBatch 里的提示词。-->
+· CSS：追加 .vocab-tag、.sub-list/.sub-item、.sentence.is-option
+· 参数：PRE_MAX_TOKENS 4000→5000，新增 SUB_MIN_WORDS/SUB_MIN_CHARS
+· 预处理：新增 OPTION_RE / isOptionLine / endsSentenceStrict / countSentences / regroupBySentences / normalizeImportText；parseArticle 改成先 normalize 再按行拆句
+· 分句：splitSentences 增加 \b([A-D])\. 保护
+· guessTitle 收紧：首行 ≤40 字、非选项、无句末标点
+· Schema：validateExplain 里 vocab 加 type，structure 加 sub: []
+· analyzeBatch 提示词升级：vocab 支持 type: "word"/"phrase"，优先搭配
+· 新增 requestSubAnalysis / renderSubList；openExplain 记录 currentExplainText；showChunkExplain 支持按需二级拆解
+· favWordToggle 加第 5 参 type；renderFavWords 显示"搭配"标签
+· handleFile 拦截 PDF；.formats 文案更新
+· UI 文案"生词"→"词汇"-->
