@@ -3,7 +3,7 @@
 A site to study English
 
 写给apple用户的话：
-1. 用 HTTPS 打开（GitHub Pages ）https://github.com/wanuo54/studyen
+1. 用 HTTPS 打开（GitHub Pages ）(https://wanuo54.github.io/studyen/ )
 2. Safari 打开后，直接“添加到主屏幕”。
 3. 以后只从主屏图标进，别和 Safari 来回切  因为两边数据不互通。
 4. 在主屏图标里配 AI Key、导入文章。
