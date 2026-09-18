@@ -1,4 +1,26 @@
 # studyen
+| 网站名称与网址 | 适合人群 | 推荐理由与应用建议 |
+|---|---|---|
+| BBC Learning English
+(bbc.co.uk/learningenglish) | 英语基础薄弱者、四级备考生 | 文章篇幅短、难度适中，附带词汇解析和音频，适合用于培养语感和积累基础核心词汇。 |
+| NYT Learning Network
+(nytimes.com/section/learning) | 四级高分段、六级基础段考生 | 专门为英语学习者筛选的《纽约时报》文章，配有阅读理解和小测试，非常契合四六级的社会与教育题材。 |
+| Science Daily
+(sciencedaily.com) | 六级考生、考研英语二考生 | 汇集最新的通俗科普新闻，文章结构清晰。四六级与考研非常喜欢选考科技类文章，适合用来突破科普类长难句。 |
+| TED Ed
+(ed.ted.com) | 四六级考生、听力与阅读双修者 | 视频均配有完整的逐字稿（Transcript），话题涵盖心理、文化与科学，适合边看文本边做精读，同步提升听力与阅读。 |
+| The Guardian
+(theguardian.com) | 六级冲刺者、考研英语一/二考生 | 英国主流大报，观点类（Opinion）文章态度鲜明、句式丰富，是六级和考研仔细阅读极其高频的真题题源。 |
+| The Economist
+(economist.com) | 六级高分冲刺者、考研英语一核心备考生 | 考研英语最核心的题源网站，逻辑极强、长难句多且用词精炼。建议从 Espresso 或 Culture 栏目入手，重点分析长难句和上下文转折。 |
+| The New York Times
+(nytimes.com) | 考研英语一/二考生 | 话题覆盖极其广泛，社论和专栏（Opinion/Tech）常被选为完形填空和阅读理解素材，适合积累美式表达与热点词汇。 |
+| The Atlantic
+(theatlantic.com) | 考研英语一冲刺高分考生 | 深度文化与社会评论杂志，文章立意深刻、剖析透彻，非常契合考研英语“考察作者深层态度与逻辑关系”的命题逻辑。 |
+| Scientific American
+(scientificamerican.com) | 考研英语一/二考生（需要攻克科普阅读者） | 权威通俗科学杂志，文章遵循“提出实验/现象-分析原因-得出结论”的标准学术逻辑，非常适合练习抓取段落主旨。 |
+| Nature News
+(nature.com/news) | 考研英语一考生 | 顶级期刊的新闻板块，用词规范严谨，适合考研后期用于拓展前沿科技话题（AI、生物医学、气候等）的背景知识。 |
 
 A site to study English
 
@@ -15,7 +37,7 @@ A site to study English
 一句话：加主屏、只用主屏、常备份。
 
 
-
+苹果用户暂不支持
 写给Android用户的话：
 网站地址： https://wanuo54.github.io/studyen/ 
 本项目提供APK安装包、网页版两种使用方案。
