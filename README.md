@@ -1,3 +1,6 @@
+四六级电子版文件可查看作者其他仓库 https://github.com/wanuo54/CET4-6-past-exam-paper
+
+如若需要其他阅读材料请访问如下链接
 # studyen
 | 网站名称与网址 | 适合人群 | 推荐理由与应用建议 |
 |---|---|---|
@@ -38,6 +41,7 @@ A site to study English
 
 
 苹果用户暂不支持
+
 写给Android用户的话：
 网站地址： https://wanuo54.github.io/studyen/ 
 本项目提供APK安装包、网页版两种使用方案。
@@ -93,4 +97,5 @@ A site to study English
 - 数据消失：卸载、清除应用缓存会清空本地数据库。
 
 
-在此致谢 toapp作者
+在此致谢 ChatGPT OpenClaude DeepSeek Gemini 豆包🥺
+toapp作者
