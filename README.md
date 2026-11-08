@@ -1,7 +1,9 @@
 四六级电子版文件可查看作者其他仓库 https://github.com/wanuo54/CET4-6-past-exam-paper
+
 推荐英语文章学习网站
 breakingnewsenglish
 https://breakingnewsenglish.com/
+
 如若需要其他阅读材料请访问如下链接
 # studyen
 | 网站名称与网址 | 适合人群 | 推荐理由与应用建议 |
@@ -30,14 +32,14 @@ https://breakingnewsenglish.com/
 A site to study English
 
 写给apple用户的话：
-1. 用 HTTPS 打开（GitHub Pages ）(https://wanuo54.github.io/studyen/ )
-2. Safari 打开后，直接“添加到主屏幕”。
-3. 以后只从主屏图标进，别和 Safari 来回切  因为两边数据不互通。
-4. 在主屏图标里配 AI Key、导入文章。
-5. 长按句子看译文，单击单词查词。
-6. 数据存在手机本地，Safari 可能自动清理。定期“我的文章 → 导出备份”，存 iCloud。
-7. 换手机：旧机导出备份，新机导入。
-8. 主屏打开是空白？在图标里重新配一次就行。
+1. 用 HTTPS 打开（GitHub Pages ）(https://wanuo54.github.io/studyen/ )或者  https://studyen.brunchs.workers.dev/
+3. Safari 打开后，直接“添加到主屏幕”。
+4. 以后只从主屏图标进，别和 Safari 来回切  因为两边数据不互通。
+5. 在主屏图标里配 AI Key、导入文章。
+6. 长按句子看译文，单击单词查词。
+7. 数据存在手机本地，Safari 可能自动清理。定期“我的文章 → 导出备份”，存 iCloud。
+8. 换手机：旧机导出备份，新机导入。
+9. 主屏打开是空白？在图标里重新配一次就行。
 
 一句话：加主屏、只用主屏、常备份。
 
@@ -46,6 +48,7 @@ A site to study English
 
 写给Android用户的话：
 网站地址： https://wanuo54.github.io/studyen/ 
+或者https://studyen.brunchs.workers.dev/
 本项目提供APK安装包、网页版两种使用方案。
  
 📦方案一：APK安装包（安卓推荐）
